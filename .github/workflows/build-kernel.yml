@@ -1,0 +1,533 @@
+name: GKI Kernel Build
+permissions:
+  contents: write
+  actions: write 
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernelsu_variant:
+        description: "Select KernelSU"
+        required: true
+        type: choice
+        options:
+          - 'KernelSU-Next'
+          - 'SukiSU-Ultra'
+        default: 'SukiSU-Ultra'
+      hook:
+        type: choice
+        description: "Select Hook"
+        required: true
+        options:
+          - 'Manual'
+          - 'Tracepoint'
+        default: 'Manual'
+      android_version:
+        description: "Select Android Version"
+        required: true
+        type: choice
+        options:
+          - 'android15'
+        default: 'android15'
+      kernel_version:
+        description: "Select Kernel Version"
+        required: true
+        type: choice
+        options:
+          - '6.6.30'
+          - '6.6.56'
+        default: '6.6.56'
+      use_bbr:
+        description: 'Enable the BBR Algorithms?'
+        required: true
+        type: boolean
+        default: true
+      use_zram:
+        description: 'Enable adding more ZRAM Algorithms?'
+        required: true
+        type: boolean
+        default: true
+      # use_kpm:
+      #   description: 'Enables the KPM Patch (may slightly increase power consumption)'
+      #   required: true
+      #   type: boolean
+      #   default: false
+
+jobs:
+ build-kernel-kernelsu-susfs:
+    name: build-kernel-${{ inputs.android_version }}-${{ inputs.kernel_version }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      CCACHE_COMPILERCHECK: "%compiler% -dumpmachine; %compiler% -dumpversion"
+      CCACHE_NOHASHDIR: "true"
+      CCACHE_HARDLINK: "true"
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+          
+      - name: Maximize Build Space
+        run: |
+          set -euo pipefail
+          
+          echo "Removing unused SDKs and tools..."
+
+          # Remove dotnet (frees ~2 GB)
+          sudo rm -rf /usr/share/dotnet || true
+          
+          # Remove haskell (frees ~5.2 GB)
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf /usr/local/.ghcup || true
+          
+          # Remove Android SDK (frees ~9 GB)
+          # sudo rm -rf /usr/local/lib/android || true
+          
+          # Remove CodeQL (frees ~5.4 GB)
+          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+
+          # Removes cached Docker images (frees ~3.2 GB)
+          sudo docker image prune --all --force || true
+
+          # Additional optional cleanup (Chromium, Edge drivers, etc.)
+          sudo rm -rf /usr/local/share/powershell || true
+          sudo rm -rf /usr/local/share/chromium || true
+          sudo rm -rf /usr/local/share/edge_driver || true
+          sudo rm -rf /usr/local/share/chromedriver || true
+
+          # Clear temp and apt cache
+          sudo rm -rf /tmp/*
+          sudo apt-get clean
+
+          # Optional: clean user cache
+          rm -rf ~/.cache
+
+          echo "Creating 4GB swap file..."
+          sudo swapoff -a
+          sudo rm -f /mnt/swapfile
+          sudo fallocate -l 4G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+
+          echo "Build space and swap maximized."
+      
+      - name: 📊 Check disk space
+        run: |
+          df -h
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-mark hold firefox
+          sudo apt-mark hold libc-bin
+          sudo apt purge man-db
+          sudo rm -rf /var/lib/man-db/auto-update
+          sudo apt update
+          sudo apt-get install -y --no-install-recommends \
+            ccache python3 git curl build-essential libssl-dev bison flex libelf-dev
+
+      - name: Set up ccache
+        run: |
+          ccache --version
+          ccache --max-size=3G
+          ccache --set-config=compression=true
+          echo "CCACHE_DIR=$HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}" >> $GITHUB_ENV
+          mkdir -p $HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}/bazel
+
+      - name: Restore ccache from cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ inputs.android_version }}-${{ inputs.kernel_version }}
+          
+      - name: Install Repo
+        run: |
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
+          chmod a+rx ~/repo
+          sudo mv ~/repo /usr/local/bin/repo
+          # echo "REPO_CACHE_DIR=$HOME/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}" >> $GITHUB_ENV
+          # mkdir -p $HOME/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}
+
+      - name: Restore repo cache
+        uses: actions/cache@v4
+        with:
+          path: kernel_workspace/.repo
+          key: repo-${{ inputs.android_version }}-${{ inputs.kernel_version }}
+      
+      - name: Initialize and Sync Kernel Source
+        run: |
+          mkdir -p kernel_workspace && cd kernel_workspace
+          
+          echo "Initializing and syncing kernel source..."
+          repo init -u https://github.com/tukangbecak01/kernel_manifest.git -b "${{ inputs.android_version }}" -m "${{ inputs.kernel_version }}.xml" --repo-rev=stable --depth=1 --no-clone-bundle --no-tags
+          repo sync -c -j$(nproc --all) --no-clone-bundle --no-tags --force-sync
+          
+          VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
+          PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
+          SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
+          echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
+            
+          # Combined kernel version
+          echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
+          
+      - name: Add KernelSU & Apply SUSFS Patches
+        run: |
+          # Clone repositories
+          git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ inputs.android_version }}-${{ env.SERIES }}
+          git clone https://github.com/tukangbecak01/kernel_patches.git
+          git clone https://github.com/tukangbecak01/AnyKernel3.git
+          
+          cd kernel_workspace
+          if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
+            echo "Adding KernelSU Next..."
+            curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s next
+          elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
+            echo "Adding KernelSU SukiSU..."
+            curl -LSs "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/main/kernel/setup.sh" | bash -s susfs-main
+          fi
+          
+          # Copy SUSFS patches
+          cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ env.SERIES }}.patch ./common/
+          cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
+          cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
+          cp ../kernel_patches/69_hide_stuff.patch ./common/
+          
+          if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
+            echo "Applying SUSFS patches for KernelSU Next..."
+            cd ./KernelSU-Next
+            
+            # Copy KernelSU-Next patches
+            cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./
+            cp ../../kernel_patches/next/apk_sign.patch ./
+            cp ../../kernel_patches/next/core_hook.patch ./
+            cp ../../kernel_patches/next/selinux.patch ./
+            cp ../../kernel_patches/next/ksud.patch ./
+            cp ../../kernel_patches/next/rules.patch ./
+            cp ../../kernel_patches/next/sucompat.patch ./
+            cp ../../kernel_patches/next/kernel_compat.patch ./
+            patch -p1 -F 3 --forward < 10_enable_susfs_for_ksu.patch || true
+            patch -p1 -F 3 --forward < apk_sign.patch
+            patch -p1 -F 3 --forward < core_hook.patch
+            patch -p1 -F 3 --forward < selinux.patch
+            patch -p1 -F 3 --forward < ksud.patch
+            patch -p1 -F 3 --forward < rules.patch
+            patch -p1 -F 3 --forward < sucompat.patch
+            patch -p1 -F 3 --forward < kernel_compat.patch
+            
+            KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" 10200)
+            echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+          elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
+            echo "Applying SUSFS patches  for SukiSU..."
+            cd ./KernelSU
+            KSU_VERSION=$(expr $(git rev-list --count main 2>/dev/null || echo 13000) + 10700)
+            echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+            cp "$GITHUB_WORKSPACE/.github/workflows/setup.sh" ./
+            chmod +x setup.sh
+            if [ ! -f "kernel/Makefile" ]; then
+              echo "kernel/Makefile not found"
+              ls -la
+              exit 1
+            fi
+            ./setup.sh
+          else
+            echo "Invalid KernelSU variant selected!"
+            exit 1
+          fi
+
+          cd ../common
+          SUSFS_VERSION=$(grep '#define SUSFS_VERSION' ./include/linux/susfs.h | awk -F'"' '{print $2}')
+          echo "SUSFS_VERSION=$SUSFS_VERSION" >> $GITHUB_ENV
+          if [ "${{ inputs.android_version }}" = "android15" ] && [ "${{ inputs.kernel_version }}" = "6.6.30" ]; then
+            if ! grep -qxF '#include <trace/hooks/fs.h>' ./fs/namespace.c; then
+                sed -i '/#include <trace\/hooks\/blk.h>/a #include <trace\/hooks\/fs.h>' ./fs/namespace.c
+            fi
+          fi
+          patch -p1 -F 3 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ env.SERIES }}.patch || true
+          patch -p1 -F 3 < 69_hide_stuff.patch
+          
+      - name: Apply Hooks Patches
+        run: |
+          cd kernel_workspace/common
+
+          if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
+            echo "Applying hooks for KernelSU-Next..."
+            cp ../../kernel_patches/next/scope_min_manual_hooks_v1.4.patch ./
+            patch -p1 -F 3 < scope_min_manual_hooks_v1.4.patch
+          elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
+            echo "Applying hooks for SukiSU..."
+            if [ "${{ inputs.hook }}" = "Manual" ]; then
+              # cp ../../kernel_patches/sukisu/syscall_hooks.patch ./
+              # patch -p1 -F 3 < syscall_hooks.patch
+              cp ../../kernel_patches/sukisu/scope_min_manual_hooks_v1.4.patch ./
+              patch -p1 -F 3 < scope_min_manual_hooks_v1.4.patch
+            elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
+              cp ../../kernel_patches/sukisu/tracepoint_hooks.patch ./
+              patch -p1 -F 3 < tracepoint_hooks.patch
+            fi
+          fi
+          
+      - name: Apply LZ4 V1.10.0, LZ4KD & ZSTDN patches
+        run: |
+          echo "Applying Zram patch"
+          cd kernel_workspace/common
+          files=(
+              "lib/lz4/lz4_compress.c"
+              "lib/lz4/lz4_decompress.c"
+              "lib/lz4/lz4defs.h"
+              "lib/lz4/lz4hc_compress.c"
+          )
+
+          for file in "${files[@]}"; do
+            if [ -e "$file" ]; then
+              rm "$file"
+              echo "$file has been deleted"
+            else
+              echo "$file does not exist"
+            fi
+          done
+
+          cp -r ../../kernel_patches/zram/lz4/lib/* ./lib/
+          cp -r ../../kernel_patches/zram/lz4/include/linux/* ./include/linux/
+          cp -r ../../kernel_patches/zram/lz4/crypto/* ./crypto/
+          cp -r ../../kernel_patches/zram/${{ env.SERIES }}/lz4_1.10.0.patch ./
+          cp ../../kernel_patches/zram/${{ env.SERIES }}/lz4kd.patch ./
+          patch -p1 -F 3 < lz4_1.10.0.patch || true
+          patch -p1 -F 3 < lz4kd.patch || true
+          echo 'Completed Zram patch'
+          
+          # Check if the file exists
+          if [ -f "fs/f2fs/Makefile" ]; then
+            # Check if the specified line is included
+            if ! grep -qF "f2fs-\$(CONFIG_F2FS_IOSTAT) += iostat.o" "fs/f2fs/Makefile"; then
+              echo "f2fs-\$(CONFIG_F2FS_IOSTAT) += iostat.o" >> "fs/f2fs/Makefile"
+              echo "Added: f2fs-\$(CONFIG_F2FS_IOSTAT) += iostat.o"
+            else
+              echo "File already contains: f2fs-\$(CONFIG_F2FS_IOSTAT) += iostat.o"
+            fi
+          else
+            echo "File does not exist: fs/f2fs/Makefile"
+          fi
+
+      - name: LZ4KD & ZSTDN Configuration
+        if: ${{ inputs.use_zram }}
+        run: |
+          set -x
+          set -e
+          echo "Write LZ4KD & ZSTDN config dependency"
+          CONFIG_FILE="kernel_workspace/common/arch/arm64/configs/gki_defconfig"
+
+          if [ "${{ env.SERIES }}" = "6.6" ] && [ "${{ inputs.android_version }}" = "android15" ]; then
+            echo "CONFIG_ZSMALLOC=y" >> "$CONFIG_FILE"
+            sed -i 's/CONFIG_ZRAM=m/CONFIG_ZRAM=y/g' "$CONFIG_FILE"
+            sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "kernel_workspace/common/modules.bzl"
+            echo "CONFIG_MODULE_SIG_FORCE=n" >> "$CONFIG_FILE"
+          fi
+          
+          if grep -q "CONFIG_ZSMALLOC=y" "$CONFIG_FILE" && grep -q "CONFIG_ZRAM=y" "$CONFIG_FILE"; then
+            echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_LZ4KD=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
+            echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
+          fi
+          
+      - name: Apply ECN and TCP Pacing Tweaks
+        run: |
+          set -e
+          TCP_IPV4_PATH="$GITHUB_WORKSPACE/kernel_workspace/common/net/ipv4/tcp_ipv4.c"
+          if [ ! -f "$TCP_IPV4_PATH" ]; then echo "ERROR: $TCP_IPV4_PATH not found!"; exit 1; fi
+          sed -i 's/net->ipv4.sysctl_tcp_ecn = 2;/net->ipv4.sysctl_tcp_ecn = 1;/' "$TCP_IPV4_PATH"
+          sed -i 's/net->ipv4.sysctl_tcp_pacing_ss_ratio = 200;/net->ipv4.sysctl_tcp_pacing_ss_ratio = 150;/' "$TCP_IPV4_PATH"
+          sed -i 's/net->ipv4.sysctl_tcp_pacing_ca_ratio = 120;/net->ipv4.sysctl_tcp_pacing_ca_ratio = 110;/' "$TCP_IPV4_PATH"
+          echo "ECN and TCP Pacing tweaks successfully applied."
+
+      - name: Add Configuration Settings
+        run: |
+          cd kernel_workspace
+          
+          FILE="./common/arch/arm64/configs/gki_defconfig"
+          set_config() {
+            KEY="$1"
+            VALUE="$2"
+
+            if grep -q "^$KEY=" "$FILE"; then
+              CURRENT_VALUE=$(grep "^$KEY=" "$FILE" | head -n1 | cut -d '=' -f2)
+              if [ "$CURRENT_VALUE" != "$VALUE" ]; then
+                echo "Updating $KEY from $CURRENT_VALUE to $VALUE"
+                sed -i "s|^$KEY=.*|$KEY=$VALUE|" "$FILE"
+              else
+                echo "$KEY is already set to $VALUE — skipping"
+              fi
+            else
+              echo "Adding $KEY=$VALUE"
+              echo "$KEY=$VALUE" >> "$FILE"
+            fi
+          }
+          
+          # KSU Configuration
+          set_config CONFIG_KSU y
+          if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
+            set_config CONFIG_KSU_SUSFS_SUS_SU n
+            set_config CONFIG_KSU_MANUAL_HOOK y
+          elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
+            MODEKPM=$([ "${{ inputs.use_kpm }}" = "true" ] && echo "KPM" || echo "NoKPM")
+            [ "$MODEKPM" = "KPM" ] && set_config CONFIG_KPM y
+            echo "MODEKPM=$MODEKPM" >> $GITHUB_ENV
+            
+            if [ "${{ inputs.hook }}" = "Manual" ]; then
+              set_config CONFIG_KSU_SUSFS_SUS_SU n
+              set_config CONFIG_KSU_MANUAL_HOOK y
+            elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
+              set_config CONFIG_KSU_SUSFS_SUS_SU n
+              set_config CONFIG_KSU_TRACEPOINT_HOOK y 
+            fi
+          fi
+          
+          # File system level compression support
+          set_config CONFIG_F2FS_FS_COMPRESSION y
+          set_config CONFIG_F2FS_FS_LZ4 y
+          set_config CONFIG_F2FS_FS_LZ4HC y
+          
+          # TMPFS Configuration
+          set_config CONFIG_RCU_TRACE n
+          set_config CONFIG_TMPFS_XATTR y
+          set_config CONFIG_TMPFS_POSIX_ACL y
+
+          # NF Configuration
+          set_config CONFIG_IP_NF_TARGET_TTL y
+          set_config CONFIG_IP6_NF_TARGET_HL y
+          set_config CONFIG_IP6_NF_MATCH_HL y
+          set_config CONFIG_IP_NF_TARGET_ECN y
+          
+          # ECN Configuration
+          set_config CONFIG_IP_ECN y
+          set_config CONFIG_TCP_ECN y
+          set_config CONFIG_IPV6_ECN y
+          
+          # SUSFS Configuration
+          set_config CONFIG_KSU_SUSFS y
+          set_config CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT y
+          set_config CONFIG_KSU_SUSFS_SUS_PATH y
+          set_config CONFIG_KSU_SUSFS_SUS_MOUNT y
+          set_config CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT y
+          set_config CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT y
+          set_config CONFIG_KSU_SUSFS_SUS_KSTAT y
+          set_config CONFIG_KSU_SUSFS_SUS_OVERLAYFS n
+          set_config CONFIG_KSU_SUSFS_TRY_UMOUNT y
+          set_config CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT y
+          set_config CONFIG_KSU_SUSFS_SPOOF_UNAME y
+          set_config CONFIG_KSU_SUSFS_ENABLE_LOG y
+          set_config CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS y
+          set_config CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG y
+          set_config CONFIG_KSU_SUSFS_OPEN_REDIRECT y
+
+          # AutoFDO Configuration (Feedback-Directed Optimization)
+          set_config CONFIG_AUTOFDO_CLANG y
+          
+          if [ "${{ inputs.use_bbr }}" = "true" ]; then
+            # BBR Configuration
+            set_config CONFIG_NET_SCH_FQ y
+            set_config CONFIG_TCP_CONG_ADVANCED y
+            set_config CONFIG_TCP_CONG_BBR y
+            set_config CONFIG_TCP_CONG_BIC n
+            set_config CONFIG_TCP_CONG_WESTWOOD n
+            set_config CONFIG_TCP_CONG_HTCP n
+            set_config CONFIG_DEFAULT_BBR y
+          fi
+          
+          # Remove check_defconfig
+          sed -i 's/check_defconfig//' ./common/build.config.gki
+
+      - name: Change Kernel Name
+        run: |
+          cd kernel_workspace
+          
+          # Set Kernel Name
+          sed -i 's/${scm_version}//' ./common/scripts/setlocalversion
+          if [ "${{ inputs.kernel_version }}" = "6.6.30" ]; then
+            echo "TIME_BUILD=Thu Aug 29 05:01:15 UTC 2024" >> $GITHUB_ENV
+            sudo sed -i 's/-4k/-android15-8-g94c1a24cabd5-ab12293704-4k/g' ./common/arch/arm64/configs/gki_defconfig
+          elif [ "${{ inputs.kernel_version }}" = "6.6.56" ]; then
+            echo "TIME_BUILD=Tue Mar 11 12:18:17 UTC 2025" >> $GITHUB_ENV
+            sudo sed -i 's/-4k/-android15-8-g7f19c751e334-ab13222567-4k/g' ./common/arch/arm64/configs/gki_defconfig
+          fi
+          
+          # Remove Abi Exports and Error
+          sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' ./common/BUILD.bazel
+          rm -rf ./common/android/abi_gki_protected_exports_*
+            
+      - name: Build
+        run : |
+          set -e
+          set -x
+          cd kernel_workspace/common
+          
+          export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/clang/host/linux-x86/clang-r510928/bin:$PATH"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/kernel-build-tools/linux-x86/bin:$PATH"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/rust/linux-x86/1.73.0b/bin:$PATH"
+          export PATH="/usr/lib/ccache:$PATH"
+
+          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
+          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 Image || { echo "make Image failed"; exit 1; }
+
+      # - name: 📦 Apply KPM Patch (SukiSU only)
+      #   if: ${{ inputs.use_kpm }}
+      #   run: |
+      #     cd kernel_workspace/common/out/arch/arm64/boot
+      #     TAG=$(curl -s https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases | jq -r 'map(select(.prerelease == false and .draft == false)) | first | .tag_name')
+      #     echo "Latest tag is: $TAG"
+      #     curl -LSs -o patch_linux "https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/download/$TAG/patch_linux"
+      #     chmod +x patch_linux
+      #     ./patch_linux
+      #     rm -f Image
+      #     mv oImage Image
+      
+      - name: 📦 Make AnyKernel3
+        run: |
+          cd ./AnyKernel3
+          ZIP_NAME="AnyKernel3_${{ env.KERNEL_VER }}_${{ inputs.kernelsu_variant }}_${{ env.KSUVER }}.zip"
+          cp ../kernel_workspace/common/out/arch/arm64/boot/Image ./Image
+          zip -q -r "../$ZIP_NAME" ./*
+            
+      - name: 📤 Upload AnyKernel3
+        uses: actions/upload-artifact@v4
+        with:
+          name: AnyKernel3_${{ env.KERNEL_VER }}_${{ inputs.kernelsu_variant }}_${{ env.KSUVER }}
+          path: ./AnyKernel3/*
+
+      - name: Package files
+        run: |
+          echo "Packing files..."
+          ESCAPED_KERNEL_VER=$(echo "${{ env.KERNEL_VER }}" | sed -e 's/\./\\./g' -e 's/-/\\-/g')
+          ESCAPED_KSU_VARIANT=$(echo "${{ inputs.kernelsu_variant }} (${{ env.KSUVER }})" | sed -e 's/\./\\./g' -e 's/-/\\-/g' -e 's/(/\\(/g' -e 's/)/\\)/g')
+          ESCAPED_SUSFS_VER=$(echo "${{ env.SUSFS_VERSION }}" | sed -e 's/\./\\./g')
+          cat > release.txt << EOF
+          >KernelVer: $ESCAPED_KERNEL_VER
+          >DriverKSU: $ESCAPED_KSU_VARIANT
+          >SUSFS ඞ: $ESCAPED_SUSFS_VER \(${{ inputs.hook }} Hook\)
+          EOF
+          
+          cat >> release.txt << 'EOF'
+          📝 Features:
+          ```
+          [+] LZ4 v1.10.0 & LZ4KD (ZRAM)
+          [+] TCP Pacing Tweaks
+          [+] BBR Algorithm + ECN Support
+          [+] TMPFS XATTR + POSIX ACL Support```
+          ⬇ How To Flash:
+          >Use flashing software, such as [Horizon Kernel Flasher](https://github.com/libxzr/HorizonKernelFlasher/releases/download/v1.3/app-release.apk) for flashing the kernel \(Give root access to the Application\)
+          EOF
+          
+      - name: Upload to telegram
+        uses: puernya/tg-bot-upload@v1
+        with:
+          bot-id: ${{ secrets.BOT_ID }}
+          chat-id: ${{ secrets.CHAT_ID }}
+          topic-id: ${{ secrets.TOPIC_ID }} 
+          file-path: |
+                  *.zip
+          caption-path: release.txt
+
+      - name: 📊 Post-build disk check
+        run: df -h
