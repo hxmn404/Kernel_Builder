@@ -341,7 +341,7 @@ jobs:
           echo "ECN and TCP Pacing tweaks successfully applied."
 
       - name: Apply Linux Security Modules (LSM)
-        if: ${{ github.inputs.use_lsm == 'true' }}
+        if: ${{ inputs.use_lsm }}
         run: |
           cd kernel_workspace/kernel_platform/common
           echo "正在启用内核级基带保护支持…"
