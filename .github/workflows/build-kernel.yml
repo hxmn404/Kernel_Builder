@@ -534,7 +534,8 @@ jobs:
           [+] LZ4 v1.10.0 & LZ4KD (ZRAM)
           [+] TCP Pacing Tweaks
           [+] BBR Algorithm + ECN Support
-          [+] TMPFS XATTR + POSIX ACL Support```
+          [+] TMPFS XATTR + POSIX ACL Support
+          [+] Kernel-level Baseband Protection Support```
           ⬇ How To Flash:
           >Use flashing software, such as [Horizon Kernel Flasher](https://github.com/libxzr/HorizonKernelFlasher/releases/download/v1.3/app-release.apk) for flashing the kernel \(Give root access to the Application\)
           EOF
