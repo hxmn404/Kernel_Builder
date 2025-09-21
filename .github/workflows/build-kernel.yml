@@ -20,7 +20,6 @@ on:
         required: true
         options:
           - 'Manual'
-          - 'Tracepoint'
         default: 'Manual'
       android_version:
         description: "Select Android Version"
@@ -202,23 +201,20 @@ jobs:
             cd ./KernelSU-Next
             
             # # Copy KernelSU-Next patches
-            # cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./
-            # cp ../../kernel_patches/next/apk_sign.patch ./
-            # cp ../../kernel_patches/next/core_hook.patch ./
-            # cp ../../kernel_patches/next/selinux.patch ./
-            # cp ../../kernel_patches/next/ksud.patch ./
-            # cp ../../kernel_patches/next/rules.patch ./
-            # cp ../../kernel_patches/next/sucompat.patch ./
-            # cp ../../kernel_patches/next/kernel_compat.patch ./
-            # patch -p1 -F 3 --forward < 10_enable_susfs_for_ksu.patch || true
-            # patch -p1 -F 3 --forward < apk_sign.patch
-            # patch -p1 -F 3 --forward < core_hook.patch
-            # patch -p1 -F 3 --forward < selinux.patch
-            # patch -p1 -F 3 --forward < ksud.patch
-            # patch -p1 -F 3 --forward < rules.patch
-            # patch -p1 -F 3 --forward < sucompat.patch
-            # patch -p1 -F 3 --forward < kernel_compat.patch
-
+            cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./
+            cp ../../kernel_patches/next/kernel_compat.patch ./
+            patch -p1 --forward < 10_enable_susfs_for_ksu.patch  || true
+            find ./kernel -maxdepth 2 -name "*.rej" -printf "%f\n" | cut -d'.' -f1 | while read -r file; do
+              echo "Patching file: $file.c with $file.patch"
+              patch_file="../../kernel_patches/next/susfs_fix_patches/$susfs_version/$file.patch"
+              if [ -f "$patch_file" ]; then
+                patch -p1 --forward < "$patch_file"
+              else
+                echo "❌ Patch file not found: $patch_file"
+              fi
+            done
+            patch -p1 --forward < kernel_compat.patch
+            
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/pershoot/KernelSU-Next/commits?sha=next&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 10200)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
@@ -250,7 +246,6 @@ jobs:
             fi
           fi
           patch -p1 -F 3 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ env.SERIES }}.patch || true
-          patch -p1 -F 3 < 69_hide_stuff.patch
           
       - name: Apply Hooks Patches
         run: |
@@ -258,19 +253,16 @@ jobs:
 
           if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
             echo "Applying hooks for KernelSU-Next..."
-            cp ../../kernel_patches/next/scope_min_manual_hooks_v1.4.patch ./
-            patch -p1 -F 3 < scope_min_manual_hooks_v1.4.patch
+            cp ../../kernel_patches/next/scope_min_manual_hooks_v1.5.patch ./
+            patch -p1 -F 3 < scope_min_manual_hooks_v1.5.patch
+            patch -p1 -F 3 < 69_hide_stuff.patch
           elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
             echo "Applying hooks for SukiSU..."
             if [ "${{ inputs.hook }}" = "Manual" ]; then
-              # cp ../../kernel_patches/sukisu/syscall_hooks.patch ./
-              # patch -p1 -F 3 < syscall_hooks.patch
               cp ../../kernel_patches/sukisu/scope_min_manual_hooks_v1.4.patch ./
               patch -p1 -F 3 < scope_min_manual_hooks_v1.4.patch
-            elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
-              cp ../../kernel_patches/sukisu/tracepoint_hooks.patch ./
-              patch -p1 -F 3 < tracepoint_hooks.patch
             fi
+            patch -p1 -F 3 < 69_hide_stuff.patch
           fi
           
       - name: Apply LZ4 V1.10.0, LZ4KD & ZSTDN patches
