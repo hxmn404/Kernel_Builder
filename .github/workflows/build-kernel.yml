@@ -206,7 +206,7 @@ jobs:
             patch -p1 --forward < 10_enable_susfs_for_ksu.patch  || true
             find ./kernel -maxdepth 2 -name "*.rej" -printf "%f\n" | cut -d'.' -f1 | while read -r file; do
               echo "Patching file: $file.c with $file.patch"
-              patch_file="../../kernel_patches/next/susfs_fix_patches/$susfs_version/$file.patch"
+              patch_file="../../kernel_patches/next/$file.patch"
               if [ -f "$patch_file" ]; then
                 patch -p1 --forward < "$patch_file"
               else
