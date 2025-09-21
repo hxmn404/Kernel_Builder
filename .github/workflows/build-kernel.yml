@@ -42,6 +42,11 @@ on:
         required: true
         type: boolean
         default: true
+      use_lsm:
+        description: "Enable kernel-level LSM to prevent illegal writes to critical partitions/device nodes"
+        required: true
+        type: boolean
+        default: true
       use_zram:
         description: 'Enable adding more ZRAM Algorithms?'
         required: true
@@ -200,22 +205,24 @@ jobs:
             cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./
             cp ../../kernel_patches/next/apk_sign.patch ./
             cp ../../kernel_patches/next/core_hook.patch ./
-            cp ../../kernel_patches/next/selinux.patch ./
-            cp ../../kernel_patches/next/ksud.patch ./
-            cp ../../kernel_patches/next/rules.patch ./
+            # cp ../../kernel_patches/next/selinux.patch ./
+            # cp ../../kernel_patches/next/ksud.patch ./
+            # cp ../../kernel_patches/next/rules.patch ./
             cp ../../kernel_patches/next/sucompat.patch ./
             cp ../../kernel_patches/next/kernel_compat.patch ./
             patch -p1 -F 3 --forward < 10_enable_susfs_for_ksu.patch || true
             patch -p1 -F 3 --forward < apk_sign.patch
             patch -p1 -F 3 --forward < core_hook.patch
-            patch -p1 -F 3 --forward < selinux.patch
-            patch -p1 -F 3 --forward < ksud.patch
-            patch -p1 -F 3 --forward < rules.patch
+            # patch -p1 -F 3 --forward < selinux.patch
+            # patch -p1 -F 3 --forward < ksud.patch
+            # patch -p1 -F 3 --forward < rules.patch
             patch -p1 -F 3 --forward < sucompat.patch
             patch -p1 -F 3 --forward < kernel_compat.patch
-            
-            KSU_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" 10200)
+
+            KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/pershoot/KernelSU-Next/commits?sha=next&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 10200)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
+            echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
+            sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" kernel/Makefile
           elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
             echo "Applying SUSFS patches  for SukiSU..."
             cd ./KernelSU
@@ -341,6 +348,14 @@ jobs:
           sed -i 's/net->ipv4.sysctl_tcp_pacing_ca_ratio = 120;/net->ipv4.sysctl_tcp_pacing_ca_ratio = 110;/' "$TCP_IPV4_PATH"
           echo "ECN and TCP Pacing tweaks successfully applied."
 
+      - name: Apply Linux Security Modules (LSM)
+        if: ${{ github.inputs.use_lsm == 'true' }}
+        run: |
+          cd kernel_workspace/kernel_platform/common
+          echo "正在启用内核级基带保护支持…"
+          curl -LSs https://raw.githubusercontent.com/TukangHantam/Baseband-guard/main/setup.sh | bash
+          sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/bpf/bpf,baseband_guard/ } }' ./security/Kconfig
+          
       - name: Add Configuration Settings
         run: |
           cd kernel_workspace
@@ -433,6 +448,11 @@ jobs:
             set_config CONFIG_TCP_CONG_WESTWOOD n
             set_config CONFIG_TCP_CONG_HTCP n
             set_config CONFIG_DEFAULT_BBR y
+          fi
+
+          # Linux Security Modules (LSM)
+          if [ "${{ github.inputs.use_lsm }}" = "true" ]; then
+            set_config CONFIG_BBG y
           fi
           
           # Remove check_defconfig
