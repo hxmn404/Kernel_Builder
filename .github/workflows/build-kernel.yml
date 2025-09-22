@@ -376,17 +376,18 @@ jobs:
           set_config CONFIG_KSU y
           if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
             set_config CONFIG_KSU_SUSFS_SUS_SU n
+            set_config CONFIG_KSU_KPROBES_HOOK n
             set_config CONFIG_KSU_MANUAL_HOOK y
           elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
             MODEKPM=$([ "${{ inputs.use_kpm }}" = "true" ] && echo "KPM" || echo "NoKPM")
             [ "$MODEKPM" = "KPM" ] && set_config CONFIG_KPM y
             echo "MODEKPM=$MODEKPM" >> $GITHUB_ENV
             
+            set_config CONFIG_KSU_SUSFS_SUS_SU n
+            set_config CONFIG_KSU_KPROBES_HOOK n
             if [ "${{ inputs.hook }}" = "Manual" ]; then
-              set_config CONFIG_KSU_SUSFS_SUS_SU n
               set_config CONFIG_KSU_MANUAL_HOOK y
             elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
-              set_config CONFIG_KSU_SUSFS_SUS_SU n
               set_config CONFIG_KSU_TRACEPOINT_HOOK y 
             fi
           fi
