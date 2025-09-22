@@ -20,6 +20,7 @@ on:
         required: true
         options:
           - 'Manual'
+          - 'Kprobes'
         default: 'Manual'
       android_version:
         description: "Select Android Version"
@@ -51,11 +52,6 @@ on:
         required: true
         type: boolean
         default: true
-      # use_kpm:
-      #   description: 'Enables the KPM Patch (may slightly increase power consumption)'
-      #   required: true
-      #   type: boolean
-      #   default: false
 
 jobs:
  build-kernel-kernelsu-susfs:
@@ -136,7 +132,7 @@ jobs:
           ccache --max-size=3G
           ccache --set-config=compression=true
           echo "CCACHE_DIR=$HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}" >> $GITHUB_ENV
-          mkdir -p $HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}/bazel
+          #mkdir -p $HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}/bazel
 
       - name: Restore ccache from cache
         uses: actions/cache@v4
@@ -149,13 +145,13 @@ jobs:
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
           chmod a+rx ~/repo
           sudo mv ~/repo /usr/local/bin/repo
-          # echo "REPO_CACHE_DIR=$HOME/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}" >> $GITHUB_ENV
-          # mkdir -p $HOME/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}
+          echo "REPO_CACHE_DIR=kernel_workspace/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}" >> $GITHUB_ENV
+          #mkdir -p kernel_workspace/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}
 
       - name: Restore repo cache
         uses: actions/cache@v4
         with:
-          path: kernel_workspace/.repo
+          path: ${{ env.REPO_CACHE_DIR }}
           key: repo-${{ inputs.android_version }}-${{ inputs.kernel_version }}
       
       - name: Initialize and Sync Kernel Source
@@ -201,7 +197,6 @@ jobs:
             cd ./KernelSU-Next
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/pershoot/KernelSU-Next/commits?sha=next&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 10200)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
-            echo "ksuver=$KSU_VERSION" >> $GITHUB_OUTPUT
             sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" kernel/Makefile
           elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
             echo "Applying SUSFS patches  for SukiSU..."
@@ -230,6 +225,7 @@ jobs:
             fi
           fi
           patch -p1 -F 3 < 50_add_susfs_in_gki-${{ inputs.android_version }}-${{ env.SERIES }}.patch || true
+          patch -p1 -F 3 < 69_hide_stuff.patch
           
       - name: Apply Hooks Patches
         run: |
@@ -239,32 +235,11 @@ jobs:
             echo "Applying hooks for KernelSU-Next..."
             cp ../../kernel_patches/next/scope_min_manual_hooks_v1.5.patch ./
             patch -p1 -F 3 < scope_min_manual_hooks_v1.5.patch
-            patch -p1 -F 3 < 69_hide_stuff.patch
           elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
             echo "Applying hooks for SukiSU..."
-            if [ "${{ inputs.hook }}" = "Manual" ]; then
-              cp ../../kernel_patches/sukisu/scope_min_manual_hooks_v1.4.patch ./
-              patch -p1 -F 3 < scope_min_manual_hooks_v1.4.patch
-            fi
-            patch -p1 -F 3 < 69_hide_stuff.patch
+            cp ../../kernel_patches/sukisu/scope_min_manual_hooks_v1.4.patch ./
+            patch -p1 -F 3 < scope_min_manual_hooks_v1.4.patch
           fi
-
-      # - name: Apply Hooks Patches
-      #   run: |
-      #     cd kernel_workspace/common
-
-      #     cp ../../kernel_patches/scope_min_manual_hooks_v1.5.patch ./
-      #     if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
-      #       echo "Applying hooks for KernelSU-Next..."
-      #       patch -p1 -F 3 < scope_min_manual_hooks_v1.5.patch
-      #       patch -p1 -F 3 < 69_hide_stuff.patch
-      #     elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
-      #       echo "Applying hooks for SukiSU..."
-      #       if [ "${{ inputs.hook }}" = "Manual" ]; then
-      #         patch -p1 -F 3 < scope_min_manual_hooks_v1.5.patch
-      #       fi
-      #       patch -p1 -F 3 < 69_hide_stuff.patch
-      #     fi
           
       - name: Apply LZ4 V1.10.0, LZ4KD & ZSTDN patches
         run: |
@@ -345,7 +320,7 @@ jobs:
         if: ${{ inputs.use_lsm }}
         run: |
           cd kernel_workspace/common
-          echo "正在启用内核级基带保护支持…"
+          echo "Enabling kernel-level baseband protection support..."
           curl -LSs https://raw.githubusercontent.com/TukangHantam/Baseband-guard/main/setup.sh | bash
           sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/bpf/bpf,baseband_guard/ } }' ./security/Kconfig
           
@@ -354,42 +329,45 @@ jobs:
           cd kernel_workspace
           
           FILE="./common/arch/arm64/configs/gki_defconfig"
+          
           set_config() {
-            KEY="$1"
-            VALUE="$2"
-
-            if grep -q "^$KEY=" "$FILE"; then
-              CURRENT_VALUE=$(grep "^$KEY=" "$FILE" | head -n1 | cut -d '=' -f2)
-              if [ "$CURRENT_VALUE" != "$VALUE" ]; then
-                echo "Updating $KEY from $CURRENT_VALUE to $VALUE"
-                sed -i "s|^$KEY=.*|$KEY=$VALUE|" "$FILE"
+              KEY="$1"
+              VALUE="$2"
+          
+              if [ "$KEY" = "CONFIG_LSM" ]; then
+                  LINE="$KEY=\"$VALUE\""
               else
-                echo "$KEY is already set to $VALUE — skipping"
+                  LINE="$KEY=$VALUE"
               fi
-            else
-              echo "Adding $KEY=$VALUE"
-              echo "$KEY=$VALUE" >> "$FILE"
-            fi
+          
+              if grep -q "^$KEY=" "$FILE"; then
+                  CURRENT_VALUE=$(grep "^$KEY=" "$FILE" | head -n1 | cut -d'=' -f2-)
+                  # hapus kutip lama khusus CONFIG_LSM
+                  if [ "$KEY" = "CONFIG_LSM" ]; then
+                      CURRENT_VALUE=$(echo "$CURRENT_VALUE" | sed 's/^"//;s/"$//')
+                  fi
+          
+                  if [ "$CURRENT_VALUE" != "$VALUE" ]; then
+                      echo "Updating $KEY from $CURRENT_VALUE to $VALUE"
+                      sed -i "s|^$KEY=.*|$LINE|" "$FILE"
+                  else
+                      echo "$KEY is already set to $VALUE — skipping"
+                  fi
+              else
+                  echo "Adding $LINE"
+                  echo "$LINE" >> "$FILE"
+              fi
           }
           
           # KSU Configuration
           set_config CONFIG_KSU y
-          if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
-            set_config CONFIG_KSU_SUSFS_SUS_SU n
+          set_config CONFIG_KSU_SUSFS_SUS_SU n
+          if [ "${{ inputs.hook }}" = "Manual" ]; then
             set_config CONFIG_KSU_KPROBES_HOOK n
             set_config CONFIG_KSU_MANUAL_HOOK y
-          elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
-            MODEKPM=$([ "${{ inputs.use_kpm }}" = "true" ] && echo "KPM" || echo "NoKPM")
-            [ "$MODEKPM" = "KPM" ] && set_config CONFIG_KPM y
-            echo "MODEKPM=$MODEKPM" >> $GITHUB_ENV
-            
-            set_config CONFIG_KSU_SUSFS_SUS_SU n
-            set_config CONFIG_KSU_KPROBES_HOOK n
-            if [ "${{ inputs.hook }}" = "Manual" ]; then
-              set_config CONFIG_KSU_MANUAL_HOOK y
-            elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
-              set_config CONFIG_KSU_TRACEPOINT_HOOK y 
-            fi
+          elif [ "${{ inputs.hook }}" = "Kprobes" ]; then
+            set_config CONFIG_KSU_KPROBES_HOOK y
+            set_config CONFIG_KSU_MANUAL_HOOK n
           fi
           
           # File system level compression support
@@ -432,9 +410,9 @@ jobs:
 
           # AutoFDO Configuration (Feedback-Directed Optimization)
           set_config CONFIG_AUTOFDO_CLANG y
-          
+
+          # BBR Configuration
           if [ "${{ inputs.use_bbr }}" = "true" ]; then
-            # BBR Configuration
             set_config CONFIG_NET_SCH_FQ y
             set_config CONFIG_TCP_CONG_ADVANCED y
             set_config CONFIG_TCP_CONG_BBR y
@@ -486,18 +464,6 @@ jobs:
           make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
           make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 Image || { echo "make Image failed"; exit 1; }
 
-      # - name: 📦 Apply KPM Patch (SukiSU only)
-      #   if: ${{ inputs.use_kpm }}
-      #   run: |
-      #     cd kernel_workspace/common/out/arch/arm64/boot
-      #     TAG=$(curl -s https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases | jq -r 'map(select(.prerelease == false and .draft == false)) | first | .tag_name')
-      #     echo "Latest tag is: $TAG"
-      #     curl -LSs -o patch_linux "https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/download/$TAG/patch_linux"
-      #     chmod +x patch_linux
-      #     ./patch_linux
-      #     rm -f Image
-      #     mv oImage Image
-      
       - name: 📦 Make AnyKernel3
         run: |
           cd ./AnyKernel3
