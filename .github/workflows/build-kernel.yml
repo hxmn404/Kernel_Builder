@@ -363,7 +363,7 @@ jobs:
           set_config CONFIG_KSU y
           set_config CONFIG_KSU_SUSFS_SUS_SU n
           if [ "${{ inputs.hook }}" = "Manual" ]; then
-            set_config CONFIG_KSU_KPROBES_HOOK n
+            # set_config CONFIG_KSU_KPROBES_HOOK n
             set_config CONFIG_KSU_MANUAL_HOOK y
           elif [ "${{ inputs.hook }}" = "Kprobes" ]; then
             set_config CONFIG_KSU_KPROBES_HOOK y
