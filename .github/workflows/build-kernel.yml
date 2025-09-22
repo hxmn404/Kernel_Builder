@@ -212,11 +212,11 @@ jobs:
             KSU_API_VERSION=$(curl -fsSL "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/susfs-main/kernel/Makefile" | \
                grep -m1 "KSU_VERSION_API :=" | awk -F'= ' '{print $2}' | tr -d '[:space:]')
             
-            # KSU_COMMIT_HASH=$(git rev-parse --short HEAD)
-            # KSU_VERSION_FULL="v$KSU_API_VERSION-$KSU_COMMIT_HASH@hxmn404"
-            # sed -i '/define get_ksu_version_full/,/endef/d' kernel/Makefile
-            # sed -i '/KSU_VERSION_API :=/d' kernel/Makefile
-            # sed -i '/KSU_VERSION_FULL :=/d' kernel/Makefile
+            KSU_COMMIT_HASH=$(git rev-parse --short HEAD)
+            KSU_VERSION_FULL="v$KSU_API_VERSION-$KSU_COMMIT_HASH@hxmn404"
+            sed -i '/define get_ksu_version_full/,/endef/d' kernel/Makefile
+            sed -i '/KSU_VERSION_API :=/d' kernel/Makefile
+            sed -i '/KSU_VERSION_FULL :=/d' kernel/Makefile
 
             # VERSION_DEFINITIONS=$'define get_ksu_version_full\n$KSU_VERSION_FULL\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_VERSION_FULL"$'
 
