@@ -220,30 +220,23 @@ jobs:
 
             # VERSION_DEFINITIONS=$'define get_ksu_version_full\n$KSU_VERSION_FULL\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_VERSION_FULL"$'
 
-            # VERSION_DEFINITIONS=$(cat << EOF
-            # define get_ksu_version_full
-            # $KSU_VERSION_FULL
-            # endef
+            VERSION_DEFINITIONS=$(cat << EOF
+              define get_ksu_version_full
+              $KSU_VERSION_FULL
+              endef
             
-            # KSU_VERSION_API := $KSU_API_VERSION
-            # KSU_VERSION_FULL := $KSU_VERSION_FULL
-            # EOF
-            # )
-            
-            # awk -v def="$VERSION_DEFINITIONS" '
-            #   /REPO_OWNER :=/ {print; print def; inserted=1; next}
-            #   1
-            #   END {if (!inserted) print def}
-            # ' kernel/Makefile > kernel/Makefile.tmp && mv kernel/Makefile.tmp kernel/Makefile
+              KSU_VERSION_API := $KSU_API_VERSION
+              KSU_VERSION_FULL := $KSU_VERSION_FULL
+            EOF
+            )
 
-            KSU_COMMIT_HASH=$(git rev-parse --short HEAD)
-            KSU_VERSION_FULL="v$KSU_API_VERSION-$KSU_COMMIT_HASH@hxmn404"
-            sed -i '/define get_ksu_version_full/,/endef/d' kernel/Makefile
-            sed -i '/KSU_VERSION_API :=/d' kernel/Makefile
-            sed -i '/KSU_VERSION_FULL :=/d' kernel/Makefile
+            # KSU_COMMIT_HASH=$(git rev-parse --short HEAD)
+            # KSU_VERSION_FULL="v$KSU_API_VERSION-$KSU_COMMIT_HASH@hxmn404"
+            # sed -i '/define get_ksu_version_full/,/endef/d' kernel/Makefile
+            # sed -i '/KSU_VERSION_API :=/d' kernel/Makefile
+            # sed -i '/KSU_VERSION_FULL :=/d' kernel/Makefile
 
-            #VERSION_DEFINITIONS=$'define get_ksu_version_full\nv\\$1-'"$KSU_COMMIT_HASH"$'@cctv18\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_API_VERSION"$'-'"$KSU_COMMIT_HASH"$'@cctv18'
-            VERSION_DEFINITIONS=$'define get_ksu_version_full\n$KSU_VERSION_FULL\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_VERSION_FULL"
+            # VERSION_DEFINITIONS=$'define get_ksu_version_full\n$KSU_VERSION_FULL\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_VERSION_FULL"
             
             awk -v def="$VERSION_DEFINITIONS" '
               /REPO_OWNER :=/ {print; print def; inserted=1; next}
