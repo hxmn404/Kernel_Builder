@@ -242,12 +242,12 @@ jobs:
 
           if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
             echo "Applying hooks for KernelSU-Next..."
-            cp ../../kernel_patches/next/scope_min_manual_hooks_v1.5.patch ./
-            patch -p1 -F 3 < scope_min_manual_hooks_v1.5.patch
+            cp ../../kernel_patches/next/scope_min_manual_hooks_v1.4.patch ./
+            patch -p1 -F 3 < scope_min_manual_hooks_v1.4.patch
           elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
             echo "Applying hooks for SukiSU..."
-            cp ../../kernel_patches/sukisu/scope_min_manual_hooks_v1.4.patch ./
-            patch -p1 -F 3 < scope_min_manual_hooks_v1.4.patch
+            cp ../../kernel_patches/sukisu/syscall_hooks.patch ./
+            patch -p1 -F 3 < syscall_hooks.patch
           fi
           
       - name: Apply LZ4 V1.10.0, LZ4KD & ZSTDN patches
@@ -314,16 +314,6 @@ jobs:
             echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
             echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
           fi
-          
-      - name: Apply ECN and TCP Pacing Tweaks
-        run: |
-          set -e
-          TCP_IPV4_PATH="$GITHUB_WORKSPACE/kernel_workspace/common/net/ipv4/tcp_ipv4.c"
-          if [ ! -f "$TCP_IPV4_PATH" ]; then echo "ERROR: $TCP_IPV4_PATH not found!"; exit 1; fi
-          sed -i 's/net->ipv4.sysctl_tcp_ecn = 2;/net->ipv4.sysctl_tcp_ecn = 1;/' "$TCP_IPV4_PATH"
-          sed -i 's/net->ipv4.sysctl_tcp_pacing_ss_ratio = 200;/net->ipv4.sysctl_tcp_pacing_ss_ratio = 150;/' "$TCP_IPV4_PATH"
-          sed -i 's/net->ipv4.sysctl_tcp_pacing_ca_ratio = 120;/net->ipv4.sysctl_tcp_pacing_ca_ratio = 110;/' "$TCP_IPV4_PATH"
-          echo "ECN and TCP Pacing tweaks successfully applied."
 
       - name: Apply Linux Security Modules (LSM)
         if: ${{ inputs.use_lsm }}
@@ -372,7 +362,7 @@ jobs:
           set_config CONFIG_KSU y
           set_config CONFIG_KSU_SUSFS_SUS_SU n
           if [ "${{ inputs.hook }}" = "Manual" ]; then
-            # set_config CONFIG_KSU_KPROBES_HOOK n
+            set_config CONFIG_KSU_KPROBES_HOOK n
             set_config CONFIG_KSU_MANUAL_HOOK y
           elif [ "${{ inputs.hook }}" = "Kprobes" ]; then
             set_config CONFIG_KSU_KPROBES_HOOK y
@@ -502,7 +492,6 @@ jobs:
           📝 Features:
           ```
           [+] LZ4 v1.10.0 & LZ4KD (ZRAM)
-          [+] TCP Pacing Tweaks
           [+] BBR Algorithm + ECN Support
           [+] TMPFS XATTR + POSIX ACL Support
           [+] Kernel-level Baseband Protection Support```
