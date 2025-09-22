@@ -229,12 +229,21 @@ jobs:
             # KSU_VERSION_FULL := $KSU_VERSION_FULL
             # EOF
             # )
-            
+
             awk -v def="$VERSION_DEFINITIONS" '
+              # 当找到 REPO_OWNER 行时，插入版本定义并设置标记
               /REPO_OWNER :=/ {print; print def; inserted=1; next}
+              # 打印所有行
               1
+              # 如果未找到插入点，在文件末尾追加
               END {if (!inserted) print def}
             ' kernel/Makefile > kernel/Makefile.tmp && mv kernel/Makefile.tmp kernel/Makefile
+            
+            # awk -v def="$VERSION_DEFINITIONS" '
+            #   /REPO_OWNER :=/ {print; print def; inserted=1; next}
+            #   1
+            #   END {if (!inserted) print def}
+            # ' kernel/Makefile > kernel/Makefile.tmp && mv kernel/Makefile.tmp kernel/Makefile
 
             KSU_VERSION=$(expr $(git rev-list --count main 2>/dev/null || echo 13000) + 10700)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
