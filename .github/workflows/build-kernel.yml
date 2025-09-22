@@ -146,7 +146,7 @@ jobs:
           chmod a+rx ~/repo
           sudo mv ~/repo /usr/local/bin/repo
           echo "REPO_CACHE_DIR=kernel_workspace/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}" >> $GITHUB_ENV
-          #mkdir -p kernel_workspace/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}
+          mkdir -p kernel_workspace/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}
 
       - name: Restore repo cache
         uses: actions/cache@v4
