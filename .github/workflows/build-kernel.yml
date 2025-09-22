@@ -132,7 +132,7 @@ jobs:
           ccache --max-size=3G
           ccache --set-config=compression=true
           echo "CCACHE_DIR=$HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}" >> $GITHUB_ENV
-          #mkdir -p $HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}/bazel
+          mkdir -p $HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}/bazel
 
       - name: Restore ccache from cache
         uses: actions/cache@v4
@@ -145,9 +145,7 @@ jobs:
           curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
           chmod a+rx ~/repo
           sudo mv ~/repo /usr/local/bin/repo
-          #echo "REPO_CACHE_DIR=kernel_workspace/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}" >> $GITHUB_ENV
-          #mkdir -p kernel_workspace/.repo_${{ inputs.android_version }}-${{ inputs.kernel_version }}
-
+          
       - name: Restore repo cache
         uses: actions/cache@v4
         with:
