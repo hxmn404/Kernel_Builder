@@ -193,51 +193,24 @@ jobs:
           if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
             echo "Applying SUSFS patches for KernelSU Next..."
             cd ./KernelSU-Next
+            
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/pershoot/KernelSU-Next/commits?sha=next&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 10200)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" kernel/Makefile
           elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
             echo "Applying SUSFS patches  for SukiSU..."
             cd ./KernelSU
-            
-            # cp "$GITHUB_WORKSPACE/.github/workflows/setup.sh" ./
-            # chmod +x setup.sh
-            # if [ ! -f "kernel/Makefile" ]; then
-            #   echo "kernel/Makefile not found"
-            #   ls -la
-            #   exit 1
-            # fi
-            # ./setup.sh
 
             KSU_API_VERSION=$(curl -fsSL "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/susfs-main/kernel/Makefile" | \
                grep -m1 "KSU_VERSION_API :=" | awk -F'= ' '{print $2}' | tr -d '[:space:]')
-            
+
             KSU_COMMIT_HASH=$(git rev-parse --short HEAD)
             KSU_VERSION_FULL="v$KSU_API_VERSION-$KSU_COMMIT_HASH@hxmn404"
             sed -i '/define get_ksu_version_full/,/endef/d' kernel/Makefile
             sed -i '/KSU_VERSION_API :=/d' kernel/Makefile
             sed -i '/KSU_VERSION_FULL :=/d' kernel/Makefile
 
-            # VERSION_DEFINITIONS=$'define get_ksu_version_full\n$KSU_VERSION_FULL\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_VERSION_FULL"$'
-
-            VERSION_DEFINITIONS=$(cat << EOF
-              define get_ksu_version_full
-              $KSU_VERSION_FULL
-              endef
-            
-              KSU_VERSION_API := $KSU_API_VERSION
-              KSU_VERSION_FULL := $KSU_VERSION_FULL
-            EOF
-            )
-
-            # KSU_COMMIT_HASH=$(git rev-parse --short HEAD)
-            # KSU_VERSION_FULL="v$KSU_API_VERSION-$KSU_COMMIT_HASH@hxmn404"
-            # sed -i '/define get_ksu_version_full/,/endef/d' kernel/Makefile
-            # sed -i '/KSU_VERSION_API :=/d' kernel/Makefile
-            # sed -i '/KSU_VERSION_FULL :=/d' kernel/Makefile
-
-            # VERSION_DEFINITIONS=$'define get_ksu_version_full\n$KSU_VERSION_FULL\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_VERSION_FULL"
-            
+            VERSION_DEFINITIONS=$'define get_ksu_version_full\n$KSU_VERSION_FULL\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_VERSION_FULL"
             awk -v def="$VERSION_DEFINITIONS" '
               /REPO_OWNER :=/ {print; print def; inserted=1; next}
               1
