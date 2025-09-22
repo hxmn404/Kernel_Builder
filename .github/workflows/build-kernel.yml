@@ -242,7 +242,8 @@ jobs:
             sed -i '/KSU_VERSION_API :=/d' kernel/Makefile
             sed -i '/KSU_VERSION_FULL :=/d' kernel/Makefile
 
-            VERSION_DEFINITIONS=$'define get_ksu_version_full\nv\\$1-'"$KSU_COMMIT_HASH"$'@cctv18\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_API_VERSION"$'-'"$KSU_COMMIT_HASH"$'@cctv18'
+            #VERSION_DEFINITIONS=$'define get_ksu_version_full\nv\\$1-'"$KSU_COMMIT_HASH"$'@cctv18\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_API_VERSION"$'-'"$KSU_COMMIT_HASH"$'@cctv18'
+            VERSION_DEFINITIONS=$'define get_ksu_version_full\n$KSU_VERSION_FULL\nendef\n\nKSU_VERSION_API := '"$KSU_API_VERSION"$'\nKSU_VERSION_FULL := v'"$KSU_VERSION_FULL"
             
             awk -v def="$VERSION_DEFINITIONS" '
               /REPO_OWNER :=/ {print; print def; inserted=1; next}
@@ -366,7 +367,7 @@ jobs:
           cd kernel_workspace/common
           echo "Enabling kernel-level baseband protection support..."
           curl -LSs https://raw.githubusercontent.com/TukangHantam/Baseband-guard/main/setup.sh | bash
-          sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/bpf/bpf,baseband_guard/ } }' ./security/Kconfig
+          # sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/bpf/bpf,baseband_guard/ } }' ./security/Kconfig
           
       - name: Add Configuration Settings
         run: |
@@ -469,7 +470,7 @@ jobs:
           # Linux Security Modules (LSM)
           if [ "${{ github.inputs.use_lsm }}" = "true" ]; then
             set_config CONFIG_BBG y
-            #set_config CONFIG_LSM landlock,lockdown,yama,loadpin,safesetid,selinux,smack,tomoyo,apparmor,bpf,baseband_guard
+            set_config CONFIG_LSM landlock,lockdown,yama,loadpin,safesetid,selinux,smack,tomoyo,apparmor,bpf,baseband_guard
           fi
           
           # Remove check_defconfig
