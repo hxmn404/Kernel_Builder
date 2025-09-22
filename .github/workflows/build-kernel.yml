@@ -209,8 +209,8 @@ jobs:
             # fi
             # ./setup.sh
 
-            # KSU_API_VERSION=$(curl -fsSL "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/susfs-main/kernel/Makefile" | \
-            #    grep -m1 "KSU_VERSION_API :=" | awk -F'= ' '{print $2}' | tr -d '[:space:]')
+            KSU_API_VERSION=$(curl -fsSL "https://raw.githubusercontent.com/SukiSU-Ultra/SukiSU-Ultra/susfs-main/kernel/Makefile" | \
+               grep -m1 "KSU_VERSION_API :=" | awk -F'= ' '{print $2}' | tr -d '[:space:]')
             
             # KSU_COMMIT_HASH=$(git rev-parse --short HEAD)
             # KSU_VERSION_FULL="v$KSU_API_VERSION-$KSU_COMMIT_HASH@hxmn404"
