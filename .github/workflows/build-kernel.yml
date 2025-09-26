@@ -111,7 +111,12 @@ jobs:
           sudo swapon /swapfile
 
           echo "Build space and swap maximized."
-      
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "hxmn404"
+          git config --global user.email "kangbuilder404@gmail.com"
+          
       - name: 📊 Check disk space
         run: |
           df -h
@@ -132,7 +137,7 @@ jobs:
           ccache --max-size=3G
           ccache --set-config=compression=true
           echo "CCACHE_DIR=$HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}" >> $GITHUB_ENV
-          mkdir -p $HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}/bazel
+          #mkdir -p $HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}/bazel
 
       - name: Restore ccache from cache
         uses: actions/cache@v4
@@ -165,7 +170,7 @@ jobs:
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
             
-          # Combined kernel version
+          # Full kernel version
           echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
           
       - name: Add KernelSU & Apply SUSFS Patches
@@ -193,24 +198,6 @@ jobs:
           if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
             echo "Applying SUSFS patches for KernelSU Next..."
             cd ./KernelSU-Next
-
-            # Copy KernelSU-Next patches
-            cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./
-            # cp ../../kernel_patches/next/apk_sign.patch ./
-            # cp ../../kernel_patches/next/core_hook.patch ./
-            # cp ../../kernel_patches/next/selinux.patch ./
-            # cp ../../kernel_patches/next/ksud.patch ./
-            # cp ../../kernel_patches/next/rules.patch ./
-            # cp ../../kernel_patches/next/sucompat.patch ./
-            # cp ../../kernel_patches/next/kernel_compat.patch ./
-            patch -p1 -F 3 --forward < 10_enable_susfs_for_ksu.patch || true
-            # patch -p1 -F 3 --forward < apk_sign.patch
-            # patch -p1 -F 3 --forward < core_hook.patch
-            # patch -p1 -F 3 --forward < selinux.patch
-            # patch -p1 -F 3 --forward < ksud.patch
-            # patch -p1 -F 3 --forward < rules.patch
-            # patch -p1 -F 3 --forward < sucompat.patch
-            # patch -p1 -F 3 --forward < kernel_compat.patch
             
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/pershoot/KernelSU-Next/commits?sha=next&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 10200)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
@@ -264,8 +251,13 @@ jobs:
             patch -p1 -F 3 < scope_min_manual_hooks_v1.4.patch
           elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
             echo "Applying hooks for SukiSU..."
-            cp ../../kernel_patches/sukisu/syscall_hooks.patch ./
-            patch -p1 -F 3 < syscall_hooks.patch
+            if [ "${{ inputs.hook }}" = "Manual" ]; then
+              cp ../../kernel_patches/sukisu/syscall_hooks.patch ./
+              patch -p1 -F 3 < syscall_hooks.patch
+            elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
+              cp ../../kernel_patches/sukisu/tracepoint_hooks.patch ./
+              patch -p1 -F 3 < tracepoint_hooks.patch
+            fi
           fi
           
       - name: Apply LZ4 V1.10.0, LZ4KD & ZSTDN patches
@@ -378,13 +370,19 @@ jobs:
           
           # KSU Configuration
           set_config CONFIG_KSU y
-          set_config CONFIG_KSU_SUSFS_SUS_SU n
-          if [ "${{ inputs.hook }}" = "Manual" ]; then
-            set_config CONFIG_KSU_KPROBES_HOOK n
-            set_config CONFIG_KSU_MANUAL_HOOK y
-          elif [ "${{ inputs.hook }}" = "Kprobes" ]; then
+          MODEKPM=$([ "${{ inputs.use_kpm }}" = "true" ] && [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ] && echo "KPM" || echo "NoKPM")
+          [ "$MODEKPM" = "KPM" ] && set_config CONFIG_KPM y
+          echo "MODEKPM=$MODEKPM" >> $GITHUB_ENV
+          if [ "${{ inputs.hook }}" = "Kprobes" ]; then
+            set_config CONFIG_KSU_SUSFS_SUS_SU y
             set_config CONFIG_KSU_KPROBES_HOOK y
-            set_config CONFIG_KSU_MANUAL_HOOK n
+            set_config CONFIG_KPROBES y
+          elif [ "${{ inputs.hook }}" = "Manual" ]; then
+            set_config CONFIG_KSU_SUSFS_SUS_SU n
+            set_config CONFIG_KSU_MANUAL_HOOK y
+          elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
+            set_config CONFIG_KSU_SUSFS_SUS_SU n
+            set_config CONFIG_KSU_TRACEPOINT_HOOK y
           fi
           
           # File system level compression support
@@ -481,6 +479,18 @@ jobs:
           make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
           make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 Image || { echo "make Image failed"; exit 1; }
 
+      # - name: 📦 Apply KPM Patch (SukiSU only)
+      #   if: ${{ inputs.use_kpm }}
+      #   run: |
+      #     cd kernel_workspace/common/out/arch/arm64/boot
+      #     TAG=$(curl -s https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases | jq -r 'map(select(.prerelease == false and .draft == false)) | first | .tag_name')
+      #     echo "Latest tag is: $TAG"
+      #     curl -LSs -o patch_linux "https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/download/$TAG/patch_linux"
+      #     chmod +x patch_linux
+      #     ./patch_linux
+      #     rm -f Image
+      #     mv oImage Image
+      
       - name: 📦 Make AnyKernel3
         run: |
           cd ./AnyKernel3
