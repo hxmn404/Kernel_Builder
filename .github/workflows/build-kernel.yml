@@ -198,7 +198,15 @@ jobs:
           if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
             echo "Applying SUSFS patches for KernelSU Next..."
             cd ./KernelSU-Next
-            
+
+            cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./
+            patch -p1 --forward < 10_enable_susfs_for_ksu.patch  || true
+            for file in $(find ./kernel -maxdepth 2 -name "*.rej" -printf "%f\n" | cut -d'.' -f1); do
+              echo "Patching file: $file.c with $file.patch"
+              patch -p1 -F 3 --forward < "../../kernel_patches/next/$file.patch"
+            done
+            patch -p1 -F 3 --forward < "../../kernel_patches/next/kernel_compat.patch"
+    
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/pershoot/KernelSU-Next/commits?sha=next&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 10200)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
             sed -i "s/DKSU_VERSION=11998/DKSU_VERSION=${KSU_VERSION}/" kernel/Makefile
