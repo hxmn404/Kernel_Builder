@@ -202,12 +202,12 @@ jobs:
 
             cp ../../susfs4ksu/kernel_patches/KernelSU/10_enable_susfs_for_ksu.patch ./
             # cp ../../kernel_patches/next/apk_sign.patch ./
-            # cp ../../kernel_patches/next/core_hook.patch ./
+            cp ../../kernel_patches/next/core_hook.patch ./
             # cp ../../kernel_patches/next/kernel_compat.patch ./
             # cp ../../kernel_patches/next/sucompat.patch ./
             patch -p1 --forward < 10_enable_susfs_for_ksu.patch  || true
             # patch -p1 -F 3 < apk_sign.patch
-            # patch -p1 -F 3 < core_hook.patch
+            patch -p1 -F 3 < core_hook.patch
             # patch -p1 -F 3 < kernel_compat.patch
             # patch -p1 -F 3 < sucompat.patch
             
