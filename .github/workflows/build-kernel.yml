@@ -67,51 +67,61 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: 🚀 Maximize Build Space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 8192
+          temp-reserve-mb: 4096
+          remove-dotnet: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
           
-      - name: Maximize Build Space
-        run: |
-          set -euo pipefail
+      # - name: Maximize Build Space
+      #   run: |
+      #     set -euo pipefail
           
-          echo "Removing unused SDKs and tools..."
+      #     echo "Removing unused SDKs and tools..."
 
-          # Remove dotnet (frees ~2 GB)
-          sudo rm -rf /usr/share/dotnet || true
+      #     # Remove dotnet (frees ~2 GB)
+      #     sudo rm -rf /usr/share/dotnet || true
           
-          # Remove haskell (frees ~5.2 GB)
-          sudo rm -rf /opt/ghc || true
-          sudo rm -rf /usr/local/.ghcup || true
+      #     # Remove haskell (frees ~5.2 GB)
+      #     sudo rm -rf /opt/ghc || true
+      #     sudo rm -rf /usr/local/.ghcup || true
           
-          # Remove Android SDK (frees ~9 GB)
-          # sudo rm -rf /usr/local/lib/android || true
+      #     # Remove Android SDK (frees ~9 GB)
+      #     # sudo rm -rf /usr/local/lib/android || true
           
-          # Remove CodeQL (frees ~5.4 GB)
-          sudo rm -rf /opt/hostedtoolcache/CodeQL || true
+      #     # Remove CodeQL (frees ~5.4 GB)
+      #     sudo rm -rf /opt/hostedtoolcache/CodeQL || true
 
-          # Removes cached Docker images (frees ~3.2 GB)
-          sudo docker image prune --all --force || true
+      #     # Removes cached Docker images (frees ~3.2 GB)
+      #     sudo docker image prune --all --force || true
 
-          # Additional optional cleanup (Chromium, Edge drivers, etc.)
-          sudo rm -rf /usr/local/share/powershell || true
-          sudo rm -rf /usr/local/share/chromium || true
-          sudo rm -rf /usr/local/share/edge_driver || true
-          sudo rm -rf /usr/local/share/chromedriver || true
+      #     # Additional optional cleanup (Chromium, Edge drivers, etc.)
+      #     sudo rm -rf /usr/local/share/powershell || true
+      #     sudo rm -rf /usr/local/share/chromium || true
+      #     sudo rm -rf /usr/local/share/edge_driver || true
+      #     sudo rm -rf /usr/local/share/chromedriver || true
 
-          # Clear temp and apt cache
-          sudo rm -rf /tmp/*
-          sudo apt-get clean
+      #     # Clear temp and apt cache
+      #     sudo rm -rf /tmp/*
+      #     sudo apt-get clean
 
-          # Optional: clean user cache
-          rm -rf ~/.cache
+      #     # Optional: clean user cache
+      #     rm -rf ~/.cache
 
-          echo "Creating 4GB swap file..."
-          sudo swapoff -a
-          sudo rm -f /mnt/swapfile
-          sudo fallocate -l 4G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+      #     echo "Creating 4GB swap file..."
+      #     sudo swapoff -a
+      #     sudo rm -f /mnt/swapfile
+      #     sudo fallocate -l 4G /swapfile
+      #     sudo chmod 600 /swapfile
+      #     sudo mkswap /swapfile
+      #     sudo swapon /swapfile
 
-          echo "Build space and swap maximized."
+      #     echo "Build space and swap maximized."
 
       - name: Configure Git
         run: |
@@ -311,28 +321,28 @@ jobs:
             echo "File does not exist: fs/f2fs/Makefile"
           fi
 
-      # - name: LZ4KD & ZSTDN Configuration
-      #   if: ${{ inputs.use_zram }}
-      #   run: |
-      #     set -x
-      #     set -e
-      #     echo "Write LZ4KD & ZSTDN config dependency"
-      #     CONFIG_FILE="kernel_workspace/common/arch/arm64/configs/gki_defconfig"
+      - name: LZ4KD & ZSTDN Configuration
+        if: ${{ inputs.use_zram }}
+        run: |
+          set -x
+          set -e
+          echo "Write LZ4KD & ZSTDN config dependency"
+          CONFIG_FILE="kernel_workspace/common/arch/arm64/configs/gki_defconfig"
 
-      #     if [ "${{ env.SERIES }}" = "6.6" ] && [ "${{ inputs.android_version }}" = "android15" ]; then
-      #       echo "CONFIG_ZSMALLOC=y" >> "$CONFIG_FILE"
-      #       sed -i 's/CONFIG_ZRAM=m/CONFIG_ZRAM=y/g' "$CONFIG_FILE"
-      #       sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "kernel_workspace/common/modules.bzl"
-      #       echo "CONFIG_MODULE_SIG_FORCE=n" >> "$CONFIG_FILE"
-      #     fi
+          if [ "${{ env.SERIES }}" = "6.6" ] && [ "${{ inputs.android_version }}" = "android15" ]; then
+            echo "CONFIG_ZSMALLOC=y" >> "$CONFIG_FILE"
+            sed -i 's/CONFIG_ZRAM=m/CONFIG_ZRAM=y/g' "$CONFIG_FILE"
+            sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "kernel_workspace/common/modules.bzl"
+            echo "CONFIG_MODULE_SIG_FORCE=n" >> "$CONFIG_FILE"
+          fi
           
-      #     if grep -q "CONFIG_ZSMALLOC=y" "$CONFIG_FILE" && grep -q "CONFIG_ZRAM=y" "$CONFIG_FILE"; then
-      #       echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
-      #       echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
-      #       echo "CONFIG_CRYPTO_LZ4KD=y" >> "$CONFIG_FILE"
-      #       echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
-      #       echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
-      #     fi
+          if grep -q "CONFIG_ZSMALLOC=y" "$CONFIG_FILE" && grep -q "CONFIG_ZRAM=y" "$CONFIG_FILE"; then
+            echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_LZ4KD=y" >> "$CONFIG_FILE"
+            echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
+            echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
+          fi
 
       - name: Apply Linux Security Modules (LSM)
         if: ${{ inputs.use_lsm }}
@@ -389,18 +399,6 @@ jobs:
           elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
             set_config CONFIG_KSU_SUSFS_SUS_SU n
             set_config CONFIG_KSU_TRACEPOINT_HOOK y
-          fi
-
-          if grep -q "CONFIG_ZSMALLOC=y" "$CONFIG_FILE" && grep -q "CONFIG_ZRAM=y" "$CONFIG_FILE"; then
-            set_config CONFIG_CRYPTO_LZ4HC y
-            set_config CONFIG_CRYPTO_LZ4K y
-            set_config CONFIG_CRYPTO_LZ4KD y
-            set_config CONFIG_CRYPTO_842 y
-            set_config CONFIG_ZRAM_WRITEBACK y
-            set_config CONFIG_ZSMALLOC y
-            sed -i 's/CONFIG_ZRAM=m/CONFIG_ZRAM=y/g' "$CONFIG_FILE"
-            sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "kernel_workspace/common/modules.bzl"
-            set_CONFIG CONFIG_MODULE_SIG_FORCE n
           fi
           
           # File system level compression support
