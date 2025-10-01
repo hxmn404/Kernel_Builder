@@ -204,12 +204,10 @@ jobs:
             cp ../../kernel_patches/next/apk_sign.patch ./
             cp ../../kernel_patches/next/core_hook.patch ./
             cp ../../kernel_patches/next/kernel_compat.patch ./
-            #cp ../../kernel_patches/next/sucompat.patch ./
             patch -p1 --forward < 10_enable_susfs_for_ksu.patch  || true
             patch -p1 -F 3 < apk_sign.patch
             patch -p1 -F 3 < core_hook.patch
             patch -p1 -F 3 < kernel_compat.patch
-            #patch -p1 -F 3 < sucompat.patch
             
             KSU_VERSION=$(expr $(curl -sI "https://api.github.com/repos/pershoot/KernelSU-Next/commits?sha=next&per_page=1" | grep -i "link:" | sed -n 's/.*page=\([0-9]*\)>; rel="last".*/\1/p') "+" 10200)
             echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
@@ -258,7 +256,9 @@ jobs:
 
           if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
             echo "Applying hooks for KernelSU-Next..."
-            cp ../../kernel_patches/next/scope_min_manual_hooks_v1.5.patch ./
+            # cp ../../kernel_patches/next/scope_min_manual_hooks_v1.5.patch ./
+            # patch -p1 -F 3 < scope_min_manual_hooks_v1.5.patch
+            cp ../../kernel_patches/sukisu/scope_min_manual_hooks_v1.5.patch ./
             patch -p1 -F 3 < scope_min_manual_hooks_v1.5.patch
           elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
             echo "Applying hooks for SukiSU..."
@@ -313,28 +313,28 @@ jobs:
             echo "File does not exist: fs/f2fs/Makefile"
           fi
 
-      - name: LZ4KD & ZSTDN Configuration
-        if: ${{ inputs.use_zram }}
-        run: |
-          set -x
-          set -e
-          echo "Write LZ4KD & ZSTDN config dependency"
-          CONFIG_FILE="kernel_workspace/common/arch/arm64/configs/gki_defconfig"
+      # - name: LZ4KD & ZSTDN Configuration
+      #   if: ${{ inputs.use_zram }}
+      #   run: |
+      #     set -x
+      #     set -e
+      #     echo "Write LZ4KD & ZSTDN config dependency"
+      #     CONFIG_FILE="kernel_workspace/common/arch/arm64/configs/gki_defconfig"
 
-          if [ "${{ env.SERIES }}" = "6.6" ] && [ "${{ inputs.android_version }}" = "android15" ]; then
-            echo "CONFIG_ZSMALLOC=y" >> "$CONFIG_FILE"
-            sed -i 's/CONFIG_ZRAM=m/CONFIG_ZRAM=y/g' "$CONFIG_FILE"
-            sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "kernel_workspace/common/modules.bzl"
-            echo "CONFIG_MODULE_SIG_FORCE=n" >> "$CONFIG_FILE"
-          fi
+      #     if [ "${{ env.SERIES }}" = "6.6" ] && [ "${{ inputs.android_version }}" = "android15" ]; then
+      #       echo "CONFIG_ZSMALLOC=y" >> "$CONFIG_FILE"
+      #       sed -i 's/CONFIG_ZRAM=m/CONFIG_ZRAM=y/g' "$CONFIG_FILE"
+      #       sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "kernel_workspace/common/modules.bzl"
+      #       echo "CONFIG_MODULE_SIG_FORCE=n" >> "$CONFIG_FILE"
+      #     fi
           
-          if grep -q "CONFIG_ZSMALLOC=y" "$CONFIG_FILE" && grep -q "CONFIG_ZRAM=y" "$CONFIG_FILE"; then
-            echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_LZ4KD=y" >> "$CONFIG_FILE"
-            echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
-            echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
-          fi
+      #     if grep -q "CONFIG_ZSMALLOC=y" "$CONFIG_FILE" && grep -q "CONFIG_ZRAM=y" "$CONFIG_FILE"; then
+      #       echo "CONFIG_CRYPTO_LZ4HC=y" >> "$CONFIG_FILE"
+      #       echo "CONFIG_CRYPTO_LZ4K=y" >> "$CONFIG_FILE"
+      #       echo "CONFIG_CRYPTO_LZ4KD=y" >> "$CONFIG_FILE"
+      #       echo "CONFIG_CRYPTO_842=y" >> "$CONFIG_FILE"
+      #       echo "CONFIG_ZRAM_WRITEBACK=y" >> "$CONFIG_FILE"
+      #     fi
 
       - name: Apply Linux Security Modules (LSM)
         if: ${{ inputs.use_lsm }}
@@ -342,6 +342,7 @@ jobs:
           cd kernel_workspace/common
           echo "Enabling kernel-level baseband protection support..."
           curl -LSs https://raw.githubusercontent.com/TukangHantam/Baseband-guard/main/setup.sh | bash
+          # landlock,lockdown,yama,loadpin,safesetid,selinux,smack,tomoyo,apparmor,bpf,baseband_guard
           # sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/bpf/bpf,baseband_guard/ } }' ./security/Kconfig
           
       - name: Add Configuration Settings
@@ -349,34 +350,22 @@ jobs:
           cd kernel_workspace
           
           FILE="./common/arch/arm64/configs/gki_defconfig"
-          
           set_config() {
-              KEY="$1"
-              VALUE="$2"
-          
-              if [ "$KEY" = "CONFIG_LSM" ]; then
-                  LINE="$KEY=\"$VALUE\""
+            KEY="$1"
+            VALUE="$2"
+
+            if grep -q "^$KEY=" "$FILE"; then
+              CURRENT_VALUE=$(grep "^$KEY=" "$FILE" | head -n1 | cut -d'=' -f2-)
+              if [ "$CURRENT_VALUE" != "$VALUE" ]; then
+                echo "Updating $KEY from $CURRENT_VALUE to $VALUE"
+                sed -i "s|^$KEY=.*|$KEY=$VALUE|" "$FILE"
               else
-                  LINE="$KEY=$VALUE"
+                echo "$KEY is already set to $VALUE — skipping"
               fi
-          
-              if grep -q "^$KEY=" "$FILE"; then
-                  CURRENT_VALUE=$(grep "^$KEY=" "$FILE" | head -n1 | cut -d'=' -f2-)
-                  # hapus kutip lama khusus CONFIG_LSM
-                  if [ "$KEY" = "CONFIG_LSM" ]; then
-                      CURRENT_VALUE=$(echo "$CURRENT_VALUE" | sed 's/^"//;s/"$//')
-                  fi
-          
-                  if [ "$CURRENT_VALUE" != "$VALUE" ]; then
-                      echo "Updating $KEY from $CURRENT_VALUE to $VALUE"
-                      sed -i "s|^$KEY=.*|$LINE|" "$FILE"
-                  else
-                      echo "$KEY is already set to $VALUE — skipping"
-                  fi
-              else
-                  echo "Adding $LINE"
-                  echo "$LINE" >> "$FILE"
-              fi
+            else
+              echo "Adding $KEY=$VALUE"
+              echo "$KEY=$VALUE" >> "$FILE"
+            fi
           }
           
           # KSU Configuration
@@ -394,6 +383,18 @@ jobs:
           elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
             set_config CONFIG_KSU_SUSFS_SUS_SU n
             set_config CONFIG_KSU_TRACEPOINT_HOOK y
+          fi
+
+          if grep -q "CONFIG_ZSMALLOC=y" "$CONFIG_FILE" && grep -q "CONFIG_ZRAM=y" "$CONFIG_FILE"; then
+            set_config CONFIG_CRYPTO_LZ4HC y
+            set_config CONFIG_CRYPTO_LZ4K y
+            set_config CONFIG_CRYPTO_LZ4KD y
+            set_config CONFIG_CRYPTO_842 y
+            set_config CONFIG_ZRAM_WRITEBACK y
+            # echo "CONFIG_ZSMALLOC=y" >> "$CONFIG_FILE"
+            # sed -i 's/CONFIG_ZRAM=m/CONFIG_ZRAM=y/g' "$CONFIG_FILE"
+            # sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "kernel_workspace/common/modules.bzl"
+            # echo "CONFIG_MODULE_SIG_FORCE=n" >> "$CONFIG_FILE"
           fi
           
           # File system level compression support
@@ -451,9 +452,8 @@ jobs:
           # Linux Security Modules (LSM)
           if [ "${{ inputs.use_lsm }}" = "true" ]; then
             set_config CONFIG_BBG y
-            set_config CONFIG_LSM landlock,lockdown,yama,loadpin,safesetid,selinux,smack,tomoyo,apparmor,bpf,baseband_guard
           fi
-          
+
           # Remove check_defconfig
           sed -i 's/check_defconfig//' ./common/build.config.gki
 
