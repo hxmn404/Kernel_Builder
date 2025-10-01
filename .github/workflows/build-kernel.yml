@@ -543,7 +543,7 @@ jobs:
           name: AnyKernel3_${{ env.KERNEL_VER }}_${{ inputs.kernelsu_variant }}_${{ env.KSUVER }}
           path: ./AnyKernel3/*
 
-      - name: Package files
+      - name: Package files for telegram
         if: ${{ inputs.upload_tg }}
         run: |
           echo "Packing files..."
