@@ -57,7 +57,7 @@ on:
         description: 'Upload files AK3 to telegram?'
         required: true
         type: boolean
-        default: true
+        default: false
 
 jobs:
  build-kernel-kernelsu-susfs:
