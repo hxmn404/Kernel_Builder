@@ -53,6 +53,11 @@ on:
         required: true
         type: boolean
         default: true
+      upload_tg:
+        description: 'Upload files AK3 to telegram?'
+        required: true
+        type: boolean
+        default: true
 
 jobs:
  build-kernel-kernelsu-susfs:
@@ -539,6 +544,7 @@ jobs:
           path: ./AnyKernel3/*
 
       - name: Package files
+        if: ${{ inputs.upload_tg }}
         run: |
           echo "Packing files..."
           ESCAPED_KERNEL_VER=$(echo "${{ env.KERNEL_VER }}" | sed -e 's/\./\\./g' -e 's/-/\\-/g')
@@ -562,6 +568,7 @@ jobs:
           EOF
           
       - name: Upload to telegram
+        if: ${{ inputs.upload_tg }}
         uses: puernya/tg-bot-upload@v1
         with:
           bot-id: ${{ secrets.BOT_ID }}
