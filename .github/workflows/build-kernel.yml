@@ -125,7 +125,16 @@ jobs:
           
       - name: 📊 Check disk space
         run: |
-          df -h
+          echo "Memory and swap:"
+          sudo free -h
+          echo
+          sudo swapon --show
+          echo
+  
+          echo "Available storage:"
+          sudo df -h
+        
+          #df -h
 
       - name: Install Dependencies
         run: |
