@@ -68,69 +68,66 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # - name: 🚀 Maximize Build Space
-      #   uses: easimon/maximize-build-space@master
-      #   with:
-      #     root-reserve-mb: 8192
-      #     temp-reserve-mb: 4096
-      #     remove-dotnet: 'true'
-      #     remove-haskell: 'true'
-      #     remove-codeql: 'true'
-      #     remove-docker-images: 'true'
+      - name: 🚀 Maximize Build Space
+        uses: easimon/maximize-build-space@master
+        with:
+          root-reserve-mb: 8192
+          temp-reserve-mb: 4096
+          remove-dotnet: 'true'
+          remove-haskell: 'true'
+          remove-codeql: 'true'
+          remove-docker-images: 'true'
           
-      - name: Maximize Build Space
-        run: |
-          echo "Memory and swap:"
-          sudo free -h
-          echo
-          sudo swapon --show
-          echo
+      # - name: Maximize Build Space
+      #   run: |
+      #     echo "Memory and swap:"
+      #     sudo free -h
+      #     echo
+      #     sudo swapon --show
+      #     echo
   
-          echo "Available storage:"
-          sudo df -h
+      #     echo "Available storage:"
+      #     sudo df -h
           
-          set -euo pipefail
+      #     set -euo pipefail
 
-          echo "Removing unused SDKs and tools in parallel..."
+      #     echo "Removing unused SDKs and tools in parallel..."
           
-          # Jalankan penghapusan folder besar secara paralel
-          sudo rm -rf /usr/share/dotnet &
-          sudo rm -rf /opt/ghc &
-          sudo rm -rf /usr/local/.ghcup &
-          # Uncomment jika ingin hapus Android SDK juga
-          # sudo rm -rf /usr/local/lib/android &
-          sudo rm -rf /opt/hostedtoolcache/CodeQL &
-          sudo docker image prune --all --force &
+      #     # Jalankan penghapusan folder besar secara paralel
+      #     sudo rm -rf /usr/share/dotnet &
+      #     sudo rm -rf /opt/ghc &
+      #     sudo rm -rf /usr/local/.ghcup &
+      #     # Uncomment jika ingin hapus Android SDK juga
+      #     # sudo rm -rf /usr/local/lib/android &
+      #     sudo rm -rf /opt/hostedtoolcache/CodeQL &
+      #     sudo docker image prune --all --force &
           
-          # Hapus driver dan browser cache juga paralel
-          sudo rm -rf /usr/local/share/powershell &
-          sudo rm -rf /usr/local/share/chromium &
-          sudo rm -rf /usr/local/share/edge_driver &
-          sudo rm -rf /usr/local/share/chromedriver &
+      #     # Hapus driver dan browser cache juga paralel
+      #     sudo rm -rf /usr/local/share/powershell &
+      #     sudo rm -rf /usr/local/share/chromium &
+      #     sudo rm -rf /usr/local/share/edge_driver &
+      #     sudo rm -rf /usr/local/share/chromedriver &
           
-          wait  # Tunggu semua proses penghapusan selesai
+      #     wait  # Tunggu semua proses penghapusan selesai
           
-          echo "Cleaning temp and apt cache..."
-          sudo rm -rf /tmp/*
-          sudo apt-get clean
+      #     echo "Cleaning temp and apt cache..."
+      #     sudo rm -rf /tmp/*
+      #     sudo apt-get clean
           
-          echo "Cleaning user cache..."
-          rm -rf ~/.cache || true
+      #     echo "Cleaning user cache..."
+      #     rm -rf ~/.cache || true
           
-          echo "Recreating 4GB swap file..."
-          sudo swapoff -a || true
-          sudo rm -f /mnt/swapfile /swapfile || true
-          sudo fallocate -l 4G /swapfile
-          sudo chmod 600 /swapfile
-          sudo mkswap /swapfile
-          sudo swapon /swapfile
+      #     echo "Recreating 4GB swap file..."
+      #     sudo swapoff -a || true
+      #     sudo rm -f /mnt/swapfile /swapfile || true
+      #     sudo fallocate -l 4G /swapfile
+      #     sudo chmod 600 /swapfile
+      #     sudo mkswap /swapfile
+      #     sudo swapon /swapfile
           
-          echo "Build space and swap maximized."
+      #     echo "Build space and swap maximized."
 
-      - name: Configure Git
-        run: |
-          git config --global user.name "hxmn404"
-          git config --global user.email "kangbuilder404@gmail.com"
+      
           
       - name: 📊 Check disk space
         run: |
@@ -142,7 +139,12 @@ jobs:
   
           echo "Available storage:"
           sudo df -h
-
+          
+      - name: Configure Git
+        run: |
+          git config --global user.name "hxmn404"
+          git config --global user.email "kangbuilder404@gmail.com"
+          
       - name: Install Dependencies
         run: |
           sudo apt-mark hold firefox
