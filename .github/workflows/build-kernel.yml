@@ -80,6 +80,15 @@ jobs:
           
       - name: Maximize Build Space
         run: |
+          echo "Memory and swap:"
+          sudo free -h
+          echo
+          sudo swapon --show
+          echo
+  
+          echo "Available storage:"
+          sudo df -h
+          
           set -euo pipefail
 
           echo "Removing unused SDKs and tools in parallel..."
@@ -133,8 +142,6 @@ jobs:
   
           echo "Available storage:"
           sudo df -h
-        
-          #df -h
 
       - name: Install Dependencies
         run: |
@@ -563,4 +570,12 @@ jobs:
           caption-path: release.txt
 
       - name: 📊 Post-build disk check
-        run: df -h
+        run: |
+          echo "Memory and swap:"
+          sudo free -h
+          echo
+          sudo swapon --show
+          echo
+  
+          echo "Available storage:"
+          sudo df -h
