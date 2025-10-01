@@ -398,9 +398,9 @@ jobs:
             set_config CONFIG_CRYPTO_842 y
             set_config CONFIG_ZRAM_WRITEBACK y
             set_config CONFIG_ZSMALLOC y
-            # sed -i 's/CONFIG_ZRAM=m/CONFIG_ZRAM=y/g' "$CONFIG_FILE"
-            # sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "kernel_workspace/common/modules.bzl"
-            # echo "CONFIG_MODULE_SIG_FORCE=n" >> "$CONFIG_FILE"
+            sed -i 's/CONFIG_ZRAM=m/CONFIG_ZRAM=y/g' "$CONFIG_FILE"
+            sed -i 's/"drivers\/block\/zram\/zram\.ko",//g; s/"mm\/zsmalloc\.ko",//g' "kernel_workspace/common/modules.bzl"
+            set_CONFIG CONFIG_MODULE_SIG_FORCE n
           fi
           
           # File system level compression support
@@ -461,6 +461,11 @@ jobs:
             set_config CONFIG_LSM "landlock,lockdown,yama,loadpin,safesetid,selinux,smack,tomoyo,apparmor,bpf,baseband_guard"
           fi
 
+          # Build Optimization Configuration
+          set_config CONFIG_LTO_CLANG_THIN y
+          set_config CONFIG_LTO_CLANG y
+          set_config CONFIG_CC_OPTIMIZE_FOR_PERFORMANCE y
+          
           # Remove check_defconfig
           sed -i 's/check_defconfig//' ./common/build.config.gki
 
