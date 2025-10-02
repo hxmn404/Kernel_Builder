@@ -172,6 +172,15 @@ jobs:
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
+
+          echo "Memory and swap:"
+          sudo free -h
+          echo
+          sudo swapon --show
+          echo
+  
+          echo "Available storage:"
+          sudo df -h
           
           echo "Build space and swap maximized."
 
