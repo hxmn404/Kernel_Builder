@@ -99,7 +99,7 @@ jobs:
           sudo rm -rf /var/lib/man-db/auto-update
           sudo apt update
           sudo apt-get install -y --no-install-recommends \
-            ccache python3 git curl build-essential libssl-dev bison flex libelf-dev aria2
+            ccache python3 git curl build-essential libssl-dev bison flex libelf-dev aria2 unzip
 
       - name: Set up ccache
         run: |
@@ -151,10 +151,6 @@ jobs:
           mv "android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}" common &&
           rm -rf common.zip &
 
-      - name: Testing d9usaif
-        run: |
-          cd kernel_workspace
-          ls -la
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
@@ -162,6 +158,18 @@ jobs:
 
           # Full kernel version
           echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
+
+      # - name: Testing d9usaif
+      #   run: |
+      #     cd kernel_workspace
+      #     ls -la
+      #     VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
+      #     PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
+      #     SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
+      #     echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
+
+      #     # Full kernel version
+      #     echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
           
       - name: Add KernelSU & Apply SUSFS Patches
         run: |
