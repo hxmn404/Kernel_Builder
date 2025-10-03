@@ -146,7 +146,7 @@ jobs:
       - name: etst
         run: |
           mkdir -p kernel_workspace && cd kernel_workspace
-          aria2c -s16 -x16 -k1M https://github.com/cctv18/android_kernel_xiaomi_mt6899/archive/refs/heads/${{ inputs.kernel_version }}.zip -o common.zip && 
+          aria2c -s16 -x16 -k1M https://github.com/TukangHantam/android_kernel_xiaomi_mt6899/archive/refs/heads/${{ inputs.kernel_version }}.zip -o common.zip && 
           unzip -q common.zip && 
           mv "android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}" common &&
           rm -rf common.zip &
