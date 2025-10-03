@@ -154,13 +154,7 @@ jobs:
           mv "android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}" common &&
           rm -rf common.zip &
 
-          VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
-          PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
-          SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
-          echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
-
-          # Full kernel version
-          echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
+          wait
 
       - name: Testing d9usaif
         run: |
