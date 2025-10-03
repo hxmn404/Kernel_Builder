@@ -76,19 +76,13 @@ jobs:
       - name: 🚀 Maximize Build Space
         uses: TukangHantam/maximize-build-space@main
         with:
-          remove-dotnet: 'true'
-          remove-haskell: 'true'
-          remove-codeql: 'true'
-          remove-docker-images: 'true'
+          remove-dotnet: true
+          remove-haskell: true
+          remove-codeql: true
+          remove-docker-images: true
           
       - name: 📊 Check disk space
         run: |
-          echo "Memory and swap:"
-          sudo free -h
-          echo
-          sudo swapon --show
-          echo
-  
           echo "Available storage:"
           sudo df -h
           
@@ -527,11 +521,5 @@ jobs:
 
       - name: 📊 Post-build disk check
         run: |
-          echo "Memory and swap:"
-          sudo free -h
-          echo
-          sudo swapon --show
-          echo
-  
           echo "Available storage:"
           sudo df -h
