@@ -99,7 +99,7 @@ jobs:
           sudo rm -rf /var/lib/man-db/auto-update
           sudo apt update
           sudo apt-get install -y --no-install-recommends \
-            ccache python3 git curl build-essential libssl-dev bison flex libelf-dev
+            ccache python3 git curl build-essential libssl-dev bison flex libelf-dev aria2
 
       - name: Set up ccache
         run: |
@@ -127,14 +127,28 @@ jobs:
           path: kernel_workspace/.repo
           key: repo-${{ inputs.android_version }}-${{ inputs.kernel_version }}
       
-      - name: Initialize and Sync Kernel Source
+      # - name: Initialize and Sync Kernel Source
+      #   run: |
+      #     mkdir -p kernel_workspace && cd kernel_workspace
+          
+      #     echo "Initializing and syncing kernel source..."
+      #     repo init -u https://github.com/TukangHantam/kernel_manifest.git -b "${{ inputs.android_version }}" -m "${{ inputs.kernel_version }}.xml" --repo-rev=stable --depth=1 --no-clone-bundle --no-tags
+      #     repo sync -c -j$(nproc --all) --no-clone-bundle --no-tags --force-sync
+          
+      #     VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
+      #     PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
+      #     SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
+      #     echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
+            
+      #     # Full kernel version
+      #     echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
+      - name: etst
         run: |
-          mkdir -p kernel_workspace && cd kernel_workspace
-          
-          echo "Initializing and syncing kernel source..."
-          repo init -u https://github.com/TukangHantam/kernel_manifest.git -b "${{ inputs.android_version }}" -m "${{ inputs.kernel_version }}.xml" --repo-rev=stable --depth=1 --no-clone-bundle --no-tags
-          repo sync -c -j$(nproc --all) --no-clone-bundle --no-tags --force-sync
-          
+          aria2c -s16 -x16 -k1M https://github.com/cctv18/android_kernel_xiaomi_mt6899/archive/refs/heads/${{ inputs.kernel_version }}.zip -o common.zip && 
+          unzip -q common.zip && 
+          mv "android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}" common &&
+          rm -rf common.zip &
+
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
@@ -142,7 +156,6 @@ jobs:
             
           # Full kernel version
           echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
-          
       - name: Add KernelSU & Apply SUSFS Patches
         run: |
           # Clone repositories
