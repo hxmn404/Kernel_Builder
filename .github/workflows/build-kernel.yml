@@ -118,17 +118,17 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ runner.os }}-${{ inputs.android_version }}-${{ inputs.kernel_version }}
           
-      - name: Install Repo
-        run: |
-          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
-          chmod a+rx ~/repo
-          sudo mv ~/repo /usr/local/bin/repo
+      # - name: Install Repo
+      #   run: |
+      #     curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
+      #     chmod a+rx ~/repo
+      #     sudo mv ~/repo /usr/local/bin/repo
           
-      - name: Restore repo cache
-        uses: actions/cache@v4
-        with:
-          path: kernel_workspace/.repo
-          key: repo-${{ inputs.android_version }}-${{ inputs.kernel_version }}
+      # - name: Restore repo cache
+      #   uses: actions/cache@v4
+      #   with:
+      #     path: kernel_workspace/.repo
+      #     key: repo-${{ inputs.android_version }}-${{ inputs.kernel_version }}
       
       # - name: Initialize and Sync Kernel Source
       #   run: |
