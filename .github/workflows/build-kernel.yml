@@ -154,12 +154,19 @@ jobs:
           mv "android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}" common &&
           rm -rf common.zip &
 
+          echo "正在克隆构建工具..." &&
+          aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/build-tools.zip -o build-tools.zip &&
+          unzip -q build-tools.zip &&
+          rm -rf build-tools.zip &
+          
+          echo "正在克隆llvm-clang18工具链..." &&
+          mkdir -p clang18 &&
+          aria2c -s16 -x16 -k1M https://gitlab.com/crdroidandroid/android_prebuilts_clang_host_linux-x86_clang-r547379/-/archive/15.0/android_prebuilts_clang_host_linux-x86_clang-r547379-15.0.zip -o clang.zip &&
+          unzip -q clang.zip -d clang18 &&
+          rm -rf clang.zip &
+          
           wait
 
-      - name: Testing d9usaif
-        run: |
-          cd kernel_workspace
-          ls -la
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
@@ -476,10 +483,11 @@ jobs:
           cd kernel_workspace/common
           
           export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
-          export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/clang/host/linux-x86/clang-r510928/bin:$PATH"
-          export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/kernel-build-tools/linux-x86/bin:$PATH"
-          export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/rust/linux-x86/1.73.0b/bin:$PATH"
+          # export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/clang/host/linux-x86/clang-r510928/bin:$PATH"
+          # export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/kernel-build-tools/linux-x86/bin:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
+          export PATH="$WORKDIR/kernel_workspace/clang18/bin:$PATH"
+          export PATH="$WORKDIR/kernel_workspace/build-tools/bin:$PATH"
 
           make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
           make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 Image || { echo "make Image failed"; exit 1; }
