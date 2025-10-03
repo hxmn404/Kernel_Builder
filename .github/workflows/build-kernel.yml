@@ -157,13 +157,17 @@ jobs:
           git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ inputs.android_version }}-${{ env.SERIES }}
           git clone https://github.com/TukangHantam/kernel_patches.git
           git clone https://github.com/TukangHantam/AnyKernel3.git
-          
+
+          ls -la
+          ls -al
           cd kernel_workspace
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
-            
+
+          ls -la
+          ls -al
           # Full kernel version
           echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
           
