@@ -99,7 +99,7 @@ jobs:
           sudo rm -rf /var/lib/man-db/auto-update
           sudo apt update
           sudo apt-get install -y --no-install-recommends \
-            ccache python3 git curl build-essential libssl-dev bison flex libelf-dev aria2 unzip
+            ccache python3 git curl build-essential libssl-dev bison flex libelf-dev aria2 unzip zip
 
       - name: Set up ccache
         run: |
@@ -159,17 +159,17 @@ jobs:
           # Full kernel version
           echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
 
-      # - name: Testing d9usaif
-      #   run: |
-      #     cd kernel_workspace
-      #     ls -la
-      #     VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
-      #     PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
-      #     SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
-      #     echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
+      - name: Testing d9usaif
+        run: |
+          cd kernel_workspace
+          ls -la
+          VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
+          PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
+          SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
+          echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
 
-      #     # Full kernel version
-      #     echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
+          # Full kernel version
+          echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
           
       - name: Add KernelSU & Apply SUSFS Patches
         run: |
