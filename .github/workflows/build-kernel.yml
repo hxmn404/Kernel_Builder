@@ -150,6 +150,18 @@ jobs:
           unzip -q common.zip && 
           mv "android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}" common &&
           rm -rf common.zip &
+
+      - name: Testing d9usaif
+        run: |
+          cd kernel_workspace
+          ls -la
+          VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
+          PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
+          SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
+          echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
+
+          # Full kernel version
+          echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
           
       - name: Add KernelSU & Apply SUSFS Patches
         run: |
@@ -158,19 +170,7 @@ jobs:
           git clone https://github.com/TukangHantam/kernel_patches.git
           git clone https://github.com/TukangHantam/AnyKernel3.git
 
-          ls -la
-          ls -al
           cd kernel_workspace
-          VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
-          PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
-          SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
-          echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
-
-          ls -la
-          ls -al
-          # Full kernel version
-          echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
-          
           if [ "${{ inputs.kernelsu_variant }}" = "KernelSU-Next" ]; then
             echo "Adding KernelSU Next..."
             curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s next
