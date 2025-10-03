@@ -159,7 +159,6 @@ jobs:
           git clone https://github.com/TukangHantam/AnyKernel3.git
           
           cd kernel_workspace
-          ls -la
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
@@ -177,7 +176,7 @@ jobs:
           fi
           
           # Copy SUSFS patches
-          cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-${{ env.SERIES }}.patch ./common/
+          cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ inputs.android_version }}-$SERIES.patch ./common/
           cp ../susfs4ksu/kernel_patches/fs/* ./common/fs/
           cp ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
           cp ../kernel_patches/69_hide_stuff.patch ./common/
