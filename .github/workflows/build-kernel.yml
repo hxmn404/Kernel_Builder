@@ -463,7 +463,7 @@ jobs:
       - name: Change Kernel Name
         run: |
           cd kernel_workspace
-          
+          ls -la
           # Set Kernel Name
           sed -i 's/${scm_version}//' ./common/scripts/setlocalversion
           if [ "${{ inputs.kernel_version }}" = "6.6.30" ]; then
@@ -486,12 +486,11 @@ jobs:
           export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
           # export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/clang/host/linux-x86/clang-r510928/bin:$PATH"
           # export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/kernel-build-tools/linux-x86/bin:$PATH"
-          WORKDIR="$(pwd)"
+          export PATH="${GITHUB_WORKSPACE}/kernel_workspace/clang18/bin:$PATH"
+          export PATH="${GITHUB_WORKSPACE}/kernel_workspace/build-tools/bin:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
-          export PATH="$WORKDIR/kernel_workspace/clang18/bin:$PATH"
-          export PATH="$WORKDIR/kernel_workspace/build-tools/bin:$PATH"
 
-          CLANG_DIR="$WORKDIR/kernel_workspace/clang18/bin"
+          CLANG_DIR="${GITHUB_WORKSPACE}/kernel_workspace/clang18/bin"
           CLANG_VERSION="$($CLANG_DIR/clang --version | head -n 1)"
           LLD_VERSION="$($CLANG_DIR/ld.lld --version | head -n 1)"
           echo "编译器信息:"
