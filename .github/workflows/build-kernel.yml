@@ -480,7 +480,6 @@ jobs:
         run : |
           set -e
           set -x
-          cd kernel_workspace/common
           
           export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
           # export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/clang/host/linux-x86/clang-r510928/bin:$PATH"
@@ -488,9 +487,11 @@ jobs:
           export PATH="$GITHUB_WORKSPACE/kernel_workspace/clang18/bin:$PATH"
           export PATH="$GITHUB_WORKSPACE/kernel_workspace/build-tools/bin:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
-          
-          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
-          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 Image || { echo "make Image failed"; exit 1; }
+
+          cd kernel_workspace/common
+          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
+          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 Image || { echo "make Image failed"; exit 1; }
+          #make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 gki_defconfig Image
 
       # - name: 📦 Apply KPM Patch (SukiSU only)
       #   if: ${{ inputs.use_kpm }}
