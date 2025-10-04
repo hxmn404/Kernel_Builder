@@ -175,7 +175,10 @@ jobs:
           # Full kernel version
           echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
 
-          ls -la
+          ls -F clang18
+
+          echo "testAkjhdbsaiogiusdfgb"
+          ls -F build-tools
           
       - name: Add KernelSU & Apply SUSFS Patches
         run: |
