@@ -149,17 +149,18 @@ jobs:
       - name: etst
         run: |
           mkdir -p kernel_workspace && cd kernel_workspace
+          echo "Cloning source code repository..."
           aria2c -s16 -x16 -k1M https://github.com/TukangHantam/android_kernel_xiaomi_mt6899/archive/refs/heads/${{ inputs.kernel_version }}.zip -o common.zip && 
           unzip -q common.zip && 
           mv "android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}" common &&
           rm -rf common.zip &
 
-          echo "正在克隆构建工具..." &&
+          echo "Cloning build tools..." &&
           aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/build-tools.zip -o build-tools.zip &&
           unzip -q build-tools.zip &&
           rm -rf build-tools.zip &
           
-          echo "正在克隆llvm-clang18工具链..." &&
+          echo "Cloning llvm-clang18 toolchain..." &&
           mkdir -p clang18 &&
           aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/clang-r510928.zip -o clang.zip &&
           unzip -q clang.zip -d clang18 &&
@@ -174,11 +175,6 @@ jobs:
 
           # Full kernel version
           echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
-
-          ls -F clang18
-
-          echo "testAkjhdbsaiogiusdfgb"
-          ls -F build-tools
           
       - name: Add KernelSU & Apply SUSFS Patches
         run: |
@@ -466,7 +462,7 @@ jobs:
       - name: Change Kernel Name
         run: |
           cd kernel_workspace
-          ls -la
+          
           # Set Kernel Name
           sed -i 's/${scm_version}//' ./common/scripts/setlocalversion
           if [ "${{ inputs.kernel_version }}" = "6.6.30" ]; then
@@ -487,8 +483,6 @@ jobs:
           set -x
           
           export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
-          # export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/clang/host/linux-x86/clang-r510928/bin:$PATH"
-          # export PATH="$GITHUB_WORKSPACE/kernel_workspace/prebuilts/kernel-build-tools/linux-x86/bin:$PATH"
           export PATH="${GITHUB_WORKSPACE}/kernel_workspace/clang18/bin:$PATH"
           export PATH="${GITHUB_WORKSPACE}/kernel_workspace/build-tools/bin:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
@@ -500,7 +494,7 @@ jobs:
           echo "Clang版本: $CLANG_VERSION"
           echo "LLD版本: $LLD_VERSION"
           pahole_version=$(pahole --version 2>/dev/null | head -n1); [ -z "$pahole_version" ] && echo "pahole版本：未安装" || echo "pahole版本：$pahole_version"
-          
+          echo " $pahole_version"
           cd kernel_workspace/common
           #make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
           #make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 Image || { echo "make Image failed"; exit 1; }
