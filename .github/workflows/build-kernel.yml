@@ -133,11 +133,11 @@ jobs:
           rm -rf build-tools.zip &
           
           echo "Cloning llvm-clang toolchain..." &&
-          CLANGVER="r510928"
-          echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          aria2c -s16 -x16 -k1M https://gitlab.com/crdroidandroid/android_prebuilts_clang_host_linux-x86_clang-r510928/-/archive/14.0/android_prebuilts_clang_host_linux-x86_clang-r510928-14.0.zip?ref_type=heads -o clang.zip &&
+          # CLANGVER="r510928"
+          # echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
+          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-r510928-main.zip?ref_type=heads -o clang.zip &&
           unzip -q clang.zip &&
-          mv "android_prebuilts_clang_host_linux-x86_clang-r510928-14.0-14.0" clang-r510928 &&
+          mv "clang-r510928-main" clang-r510928 &&
           rm -rf clang.zip &
 
           # mkdir -p clang-r510928 &&
@@ -155,6 +155,7 @@ jobs:
           # Full kernel version
           echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
 
+          ls -la
           cd clang-r510928
           ls -la
       - name: Add KernelSU & Apply SUSFS Patches
