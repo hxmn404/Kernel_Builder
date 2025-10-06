@@ -141,7 +141,7 @@ jobs:
           # rm -rf clang-r510928.zip &
 
           mkdir -p clang-r510928 &&
-          aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/clang-r510928.zip -o clang.zip &&
+          aria2c -s16 -x16 -k1M https://github.com/hxmn404/adgf/releases/download/hh/clang-r510928.zip -o clang.zip &&
           unzip -q clang.zip -d clang-r510928 &&
           rm -rf clang.zip &
           
