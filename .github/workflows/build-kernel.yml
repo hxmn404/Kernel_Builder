@@ -14,7 +14,7 @@ on:
           - 'KernelSU-Next'
           - 'SukiSU-Ultra'
         default: 'SukiSU-Ultra'
-      hook:
+      use_hook:
         type: choice
         description: "Select Hook"
         required: true
@@ -76,10 +76,11 @@ jobs:
       - name: 🚀 Maximize Build Space
         uses: TukangHantam/maximize-build-space@main
         with:
-          remove-dotnet: true
-          remove-haskell: true
-          remove-codeql: true
-          remove-docker-images: true
+          remove-dotnet: 'true'         # Frees ~2 GB
+          remove-haskell: 'true'        # Frees ~5.2 GB
+          remove-codeql: 'true'         # Frees ~5.4 GB
+          remove-docker-images: 'true'  # Frees ~3.2 GB
+          verbose: 'true'               # Show detailed logging of the action
           
       - name: 📊 Check disk space
         run: |
@@ -117,34 +118,6 @@ jobs:
         with:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ runner.os }}-${{ inputs.android_version }}-${{ inputs.kernel_version }}
-          
-      # - name: Install Repo
-      #   run: |
-      #     curl https://storage.googleapis.com/git-repo-downloads/repo > ~/repo
-      #     chmod a+rx ~/repo
-      #     sudo mv ~/repo /usr/local/bin/repo
-          
-      # - name: Restore repo cache
-      #   uses: actions/cache@v4
-      #   with:
-      #     path: kernel_workspace/.repo
-      #     key: repo-${{ inputs.android_version }}-${{ inputs.kernel_version }}
-      
-      # - name: Initialize and Sync Kernel Source
-      #   run: |
-      #     mkdir -p kernel_workspace && cd kernel_workspace
-          
-      #     echo "Initializing and syncing kernel source..."
-      #     repo init -u https://github.com/TukangHantam/kernel_manifest.git -b "${{ inputs.android_version }}" -m "${{ inputs.kernel_version }}.xml" --repo-rev=stable --depth=1 --no-clone-bundle --no-tags
-      #     repo sync -c -j$(nproc --all) --no-clone-bundle --no-tags --force-sync
-          
-      #     VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
-      #     PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
-      #     SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
-      #     echo "SERIES=${VERSION}.${PATCHLEVEL}" >> $GITHUB_ENV
-            
-      #     # Full kernel version
-      #     echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
       
       - name: etst
         run: |
@@ -161,13 +134,15 @@ jobs:
           rm -rf build-tools.zip &
           
           echo "Cloning llvm-clang18 toolchain..." &&
-          mkdir -p clang18 &&
-          aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/clang-r510928.zip -o clang.zip &&
-          unzip -q clang.zip -d clang18 &&
-          rm -rf clang.zip &
+          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/archive/refs/heads/clang-r510928-main.zip -o clang18.zip &&
+          unzip -q clang18.zip &&
+          rm -rf clang18.zip &
           
           wait
 
+          ls -F /common
+          echo "hsabfjaijsfbouiaiof"
+          ls -F /common/android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
@@ -262,10 +237,10 @@ jobs:
             patch -p1 -F 3 < scope_min_manual_hooks_v1.5.patch
           elif [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ]; then
             echo "Applying hooks for SukiSU..."
-            if [ "${{ inputs.hook }}" = "Manual" ]; then
+            if [ "${{ inputs.use_hook }}" = "Manual" ]; then
               cp ../../kernel_patches/sukisu/scope_min_manual_hooks_v1.5.patch ./
               patch -p1 -F 3 < scope_min_manual_hooks_v1.5.patch
-            elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
+            elif [ "${{ inputs.use_hook }}" = "Tracepoint" ]; then
               cp ../../kernel_patches/sukisu/tracepoint_hooks.patch ./
               patch -p1 -F 3 < tracepoint_hooks.patch
             fi
@@ -342,6 +317,7 @@ jobs:
           cd kernel_workspace/common
           echo "Enabling kernel-level baseband protection support..."
           curl -LSs https://raw.githubusercontent.com/TukangHantam/Baseband-guard/main/setup.sh | bash
+          sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/bpf/bpf,baseband_guard/ } }' ./security/Kconfig
           
       - name: Add Configuration Settings
         run: |
@@ -352,43 +328,30 @@ jobs:
             KEY="$1"
             VALUE="$2"
         
-            if [ "$KEY" = "CONFIG_LSM" ]; then
-                LINE="$KEY=\"$VALUE\""
-            else
-                LINE="$KEY=$VALUE"
-            fi
-        
             if grep -q "^$KEY=" "$FILE"; then
               CURRENT_VALUE=$(grep "^$KEY=" "$FILE" | head -n1 | cut -d'=' -f2-)
-              if [ "$KEY" = "CONFIG_LSM" ]; then
-                CURRENT_VALUE=$(echo "$CURRENT_VALUE" | sed 's/^"//;s/"$//')
-              fi
-        
               if [ "$CURRENT_VALUE" != "$VALUE" ]; then
                 echo "Updating $KEY from $CURRENT_VALUE to $VALUE"
-                sed -i "s|^$KEY=.*|$LINE|" "$FILE"
+                sed -i "s|^$KEY=.*|$KEY=$VALUE|" "$FILE"
               else
                 echo "$KEY is already set to $VALUE — skipping"
               fi
             else
-              echo "Adding $LINE"
-              echo "$LINE" >> "$FILE"
+              echo "Adding $KEY=$VALUE"
+              echo "$KEY=$VALUE" >> "$FILE"
             fi
           }
           
           # KSU Configuration
           set_config CONFIG_KSU y
-          MODEKPM=$([ "${{ inputs.use_kpm }}" = "true" ] && [ "${{ inputs.kernelsu_variant }}" = "SukiSU-Ultra" ] && echo "KPM" || echo "NoKPM")
-          [ "$MODEKPM" = "KPM" ] && set_config CONFIG_KPM y
-          echo "MODEKPM=$MODEKPM" >> $GITHUB_ENV
-          if [ "${{ inputs.hook }}" = "Kprobes" ]; then
+          if [ "${{ inputs.use_hook }}" = "Kprobes" ]; then
             set_config CONFIG_KSU_SUSFS_SUS_SU y
             set_config CONFIG_KSU_KPROBES_HOOK y
             set_config CONFIG_KPROBES y
-          elif [ "${{ inputs.hook }}" = "Manual" ]; then
+          elif [ "${{ inputs.use_hook }}" = "Manual" ]; then
             set_config CONFIG_KSU_SUSFS_SUS_SU n
             set_config CONFIG_KSU_MANUAL_HOOK y
-          elif [ "${{ inputs.hook }}" = "Tracepoint" ]; then
+          elif [ "${{ inputs.use_hook }}" = "Tracepoint" ]; then
             set_config CONFIG_KSU_SUSFS_SUS_SU n
             set_config CONFIG_KSU_TRACEPOINT_HOOK y
           fi
@@ -448,7 +411,6 @@ jobs:
           # Linux Security Modules (LSM)
           if [ "${{ inputs.use_lsm }}" = "true" ]; then
             set_config CONFIG_BBG y
-            set_config CONFIG_LSM "landlock,lockdown,yama,loadpin,safesetid,selinux,smack,tomoyo,apparmor,bpf,baseband_guard"
           fi
 
           # Build Optimization Configuration
@@ -481,36 +443,24 @@ jobs:
         run : |
           set -e
           set -x
-          
-          export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
-          export PATH="${GITHUB_WORKSPACE}/kernel_workspace/clang18/bin:$PATH"
-          export PATH="${GITHUB_WORKSPACE}/kernel_workspace/build-tools/bin:$PATH"
-          export PATH="/usr/lib/ccache:$PATH"
 
-          CLANG_DIR="${GITHUB_WORKSPACE}/kernel_workspace/clang18/bin"
+          export PATH="/usr/lib/ccache:$PATH"
+          export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/clang18/bin:$PATH"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/build-tools/bin:$PATH"
+          
+          CLANG_DIR="$GITHUB_WORKSPACE/kernel_workspace/clang18/bin"
           CLANG_VERSION="$($CLANG_DIR/clang --version | head -n 1)"
           LLD_VERSION="$($CLANG_DIR/ld.lld --version | head -n 1)"
-          echo "编译器信息:"
-          echo "Clang版本: $CLANG_VERSION"
-          echo "LLD版本: $LLD_VERSION"
-          pahole_version=$(pahole --version 2>/dev/null | head -n1); [ -z "$pahole_version" ] && echo "pahole版本：未安装" || echo "pahole版本：$pahole_version"
-          rustc_version=$(rustc --version 2>/dev/null | head -n1); [ -z "$rustc_version" ] && echo "rustc: " || echo "rustc：$rustc_version"
+          echo "Compiler information:"
+          echo "Clang Version: $CLANG_VERSION"
+          echo "LLD Version: $LLD_VERSION"
+          pahole_version=$(pahole --version 2>/dev/null | head -n1); [ -z "$pahole_version" ] && echo "pahole Version：Not installed" || echo "pahole Version：$pahole_version"
+          rustc_version=$(rustc --version 2>/dev/null | head -n1); [ -z "$rustc_version" ] && echo "rustc Version: Not installed" || echo "rustc Version：$rustc_version"
+          
           cd kernel_workspace/common
-          #make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
-          #make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 Image || { echo "make Image failed"; exit 1; }
-          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 gki_defconfig Image
-
-      # - name: 📦 Apply KPM Patch (SukiSU only)
-      #   if: ${{ inputs.use_kpm }}
-      #   run: |
-      #     cd kernel_workspace/common/out/arch/arm64/boot
-      #     TAG=$(curl -s https://api.github.com/repos/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases | jq -r 'map(select(.prerelease == false and .draft == false)) | first | .tag_name')
-      #     echo "Latest tag is: $TAG"
-      #     curl -LSs -o patch_linux "https://github.com/SukiSU-Ultra/SukiSU_KernelPatch_patch/releases/download/$TAG/patch_linux"
-      #     chmod +x patch_linux
-      #     ./patch_linux
-      #     rm -f Image
-      #     mv oImage Image
+          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
+          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 Image || { echo "make Image failed"; exit 1; }
       
       - name: 📦 Make AnyKernel3
         run: |
@@ -535,7 +485,7 @@ jobs:
           cat > release.txt << EOF
           >KernelVer: $ESCAPED_KERNEL_VER
           >DriverKSU: $ESCAPED_KSU_VARIANT
-          >SUSFS ඞ: $ESCAPED_SUSFS_VER \(${{ inputs.hook }} Hook\)
+          >SUSFS ඞ: $ESCAPED_SUSFS_VER \(${{ inputs.use_hook }} Hook\)
           EOF
           
           cat >> release.txt << 'EOF'
