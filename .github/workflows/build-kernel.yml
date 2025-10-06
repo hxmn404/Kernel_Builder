@@ -134,10 +134,11 @@ jobs:
           rm -rf build-tools.zip &
           
           echo "Cloning llvm-clang18 toolchain..." &&
-          mkdir -p clang18 &&
-          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-r510928-main.zip -o clang.zip &&
-          unzip -q clang.zip -d clang18 &&
-          rm -rf clang.zip &
+          clangver = "r510928"
+          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-$clangver-main.zip -o clang-$clangver.zip &&
+          unzip -q clang-$clangver.zip &&
+          mv "clang-r510928-main" clang-$clangver &&
+          rm -rf clang-$clangver.zip &
           
           wait
 
