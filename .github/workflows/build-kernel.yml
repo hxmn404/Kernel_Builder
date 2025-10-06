@@ -143,6 +143,7 @@ jobs:
           wait
           ls -la
           cd clang-${CLANGVER}
+          ls -la
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
