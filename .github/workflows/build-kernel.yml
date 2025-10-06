@@ -448,7 +448,7 @@ jobs:
           export PATH="$GITHUB_WORKSPACE/kernel_workspace/clang-r510928/bin:$PATH"
           export PATH="$GITHUB_WORKSPACE/kernel_workspace/build-tools/bin:$PATH"
           
-          CLANG_DIR="$GITHUB_WORKSPACE/kernel_workspace/clang-${{ env.CLANGVER }}w/bin"
+          CLANG_DIR="$GITHUB_WORKSPACE/kernel_workspace/clang-r510928/bin"
           CLANG_VERSION="$($CLANG_DIR/clang --version | head -n 1)"
           LLD_VERSION="$($CLANG_DIR/ld.lld --version | head -n 1)"
           echo "Compiler information:"
