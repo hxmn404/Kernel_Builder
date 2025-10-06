@@ -139,14 +139,8 @@ jobs:
           unzip -q clang.zip &&
           mv "clang-r510928-main" clang-r510928 &&
           rm -rf clang.zip &
-
-          # mkdir -p clang-r510928 &&
-          # aria2c -s16 -x16 -k1M https://gitlab.com/crdroidandroid/android_prebuilts_clang_host_linux-x86_clang-r510928/-/archive/14.0/android_prebuilts_clang_host_linux-x86_clang-r510928-14.0.zip?ref_type=heads -o clang.zip &&
-          # unzip -q clang.zip -d clang-r510928 &&
-          # rm -rf clang.zip &
           
           wait
-          ls -la
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
