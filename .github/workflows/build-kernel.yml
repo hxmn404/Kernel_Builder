@@ -140,6 +140,7 @@ jobs:
           
           wait
 
+          ls -la
           ls -F /common
           echo "hsabfjaijsfbouiaiof"
           ls -F /common/android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}
