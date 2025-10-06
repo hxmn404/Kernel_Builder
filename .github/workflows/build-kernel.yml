@@ -448,7 +448,7 @@ jobs:
 
           export PATH="/usr/lib/ccache:$PATH"
           export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
-          export PATH="$GITHUB_WORKSPACE/kernel_workspace/clang18/bin:$PATH"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/clang-${{ env.CLANGVER }}/bin:$PATH"
           export PATH="$GITHUB_WORKSPACE/kernel_workspace/build-tools/bin:$PATH"
           
           CLANG_DIR="$GITHUB_WORKSPACE/kernel_workspace/clang18/bin"
