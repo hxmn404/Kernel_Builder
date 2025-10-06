@@ -154,7 +154,9 @@ jobs:
 
           # Full kernel version
           echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
-          
+
+          cd clang-r510928
+          ls -la
       - name: Add KernelSU & Apply SUSFS Patches
         run: |
           # Clone repositories
