@@ -135,13 +135,13 @@ jobs:
           echo "Cloning llvm-clang18 toolchain..." &&
           CLANGVER="r510928"
           echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-${CLANGVER}/-/archive/main/clang-${CLANGVER}-main.zip -o clang-$CLANGVER.zip &&
-          unzip -q clang-$CLANGVER.zip &&
-          mv "clang-${CLANGVER}-main" clang-$CLANGVER &&
-          rm -rf clang-$CLANGVER.zip &
+          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-${CLANGVER}/-/archive/main/clang-${CLANGVER}-main.zip -o clang-${CLANGVER}.zip &&
+          unzip -q clang-${CLANGVER}.zip &&
+          mv "clang-${CLANGVER}-main" clang-${CLANGVER} &&
+          rm -rf clang-${CLANGVER}.zip &
           
           wait
-
+          ls -la
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
