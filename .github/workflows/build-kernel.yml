@@ -132,13 +132,18 @@ jobs:
           unzip -q build-tools.zip &&
           rm -rf build-tools.zip &
           
-          echo "Cloning llvm-clang18 toolchain..." &&
+          echo "Cloning llvm-clang toolchain..." &&
           # CLANGVER="r510928"
           # echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-r510928-main.zip -o clang-r510928.zip &&
-          unzip -q clang-r510928.zip &&
-          mv "clang-r510928-main" clang-r510928 &&
-          rm -rf clang-r510928.zip &
+          # aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-r510928-main.zip -o clang-r510928.zip &&
+          # unzip -q clang-r510928.zip &&
+          # mv "clang-r510928-main" clang-r510928 &&
+          # rm -rf clang-r510928.zip &
+
+          mkdir -p clang-r510928 &&
+          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-r510928-main.zip -o clang.zip &&
+          unzip -q clang.zip -d clang-r510928 &&
+          rm -rf clang.zip &
           
           wait
           ls -la
