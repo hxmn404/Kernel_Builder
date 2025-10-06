@@ -111,7 +111,6 @@ jobs:
           ccache --max-size=3G
           ccache --set-config=compression=true
           echo "CCACHE_DIR=$HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}" >> $GITHUB_ENV
-          #mkdir -p $HOME/.ccache_${{ inputs.android_version }}-${{ inputs.kernel_version }}/bazel
 
       - name: Restore ccache from cache
         uses: actions/cache@v4
@@ -136,14 +135,13 @@ jobs:
           echo "Cloning llvm-clang18 toolchain..." &&
           CLANGVER="r510928"
           echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-r510928-main.zip -o clang-$CLANGVER.zip &&
+          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-${CLANGVER}/-/archive/main/clang-${CLANGVER}-main.zip -o clang-$CLANGVER.zip &&
           unzip -q clang-$CLANGVER.zip &&
-          mv "clang-r510928-main" clang-$CLANGVER &&
+          mv "clang-${CLANGVER}-main" clang-$CLANGVER &&
           rm -rf clang-$CLANGVER.zip &
           
           wait
 
-          ls -la
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
@@ -218,7 +216,6 @@ jobs:
           fi
 
           cd ../common
-          ls -la
           SUSFS_VERSION=$(grep '#define SUSFS_VERSION' ./include/linux/susfs.h | awk -F'"' '{print $2}')
           echo "SUSFS_VERSION=$SUSFS_VERSION" >> $GITHUB_ENV
           if [ "${{ inputs.android_version }}" = "android15" ] && [ "${{ inputs.kernel_version }}" = "6.6.30" ]; then
