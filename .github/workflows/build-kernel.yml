@@ -443,13 +443,12 @@ jobs:
           set -e
           set -x
 
-          
-          export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
-          export PATH="${GITHUB_WORKSPACE}/kernel_workspace/clang-${{ env.CLANGVER }}/bin:$PATH"
-          export PATH="${GITHUB_WORKSPACE}/kernel_workspace/build-tools/bin:$PATH"
           export PATH="/usr/lib/ccache:$PATH"
+          export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/clang-r510928/bin:$PATH"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/build-tools/bin:$PATH"
           
-          CLANG_DIR="${GITHUB_WORKSPACE}/kernel_workspace/clang18/bin"
+          CLANG_DIR="$GITHUB_WORKSPACE/kernel_workspace/clang-${{ env.CLANGVER }}w/bin"
           CLANG_VERSION="$($CLANG_DIR/clang --version | head -n 1)"
           LLD_VERSION="$($CLANG_DIR/ld.lld --version | head -n 1)"
           echo "Compiler information:"
