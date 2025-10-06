@@ -133,17 +133,17 @@ jobs:
           rm -rf build-tools.zip &
           
           echo "Cloning llvm-clang toolchain..." &&
-          # CLANGVER="r510928"
-          # echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          # aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-r510928-main.zip -o clang-r510928.zip &&
-          # unzip -q clang-r510928.zip &&
-          # mv "clang-r510928-main" clang-r510928 &&
-          # rm -rf clang-r510928.zip &
+          CLANGVER="r510928"
+          echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
+          aria2c -s16 -x16 -k1M https://gitlab.com/crdroidandroid/android_prebuilts_clang_host_linux-x86_clang-r510928/-/archive/14.0/android_prebuilts_clang_host_linux-x86_clang-r510928-14.0.zip?ref_type=heads -o clang-r510928.zip &&
+          unzip -q clang-r510928.zip &&
+          mv "clang-r510928-main" clang-r510928 &&
+          rm -rf clang-r510928.zip &
 
-          mkdir -p clang-r510928 &&
-          aria2c -s16 -x16 -k1M https://github.com/hxmn404/adgf/releases/download/hh/clang-r510928.zip -o clang.zip &&
-          unzip -q clang.zip -d clang-r510928 &&
-          rm -rf clang.zip &
+          # mkdir -p clang-r510928 &&
+          # aria2c -s16 -x16 -k1M https://gitlab.com/crdroidandroid/android_prebuilts_clang_host_linux-x86_clang-r510928/-/archive/14.0/android_prebuilts_clang_host_linux-x86_clang-r510928-14.0.zip?ref_type=heads -o clang.zip &&
+          # unzip -q clang.zip -d clang-r510928 &&
+          # rm -rf clang.zip &
           
           wait
           ls -la
