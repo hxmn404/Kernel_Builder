@@ -141,9 +141,6 @@ jobs:
           wait
 
           ls -la
-          ls -F /common
-          echo "hsabfjaijsfbouiaiof"
-          ls -F /common/android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
@@ -218,6 +215,7 @@ jobs:
           fi
 
           cd ../common
+          ls -la
           SUSFS_VERSION=$(grep '#define SUSFS_VERSION' ./include/linux/susfs.h | awk -F'"' '{print $2}')
           echo "SUSFS_VERSION=$SUSFS_VERSION" >> $GITHUB_ENV
           if [ "${{ inputs.android_version }}" = "android15" ] && [ "${{ inputs.kernel_version }}" = "6.6.30" ]; then
