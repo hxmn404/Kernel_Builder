@@ -141,7 +141,7 @@ jobs:
           # rm -rf clang-r510928.zip &
 
           mkdir -p clang-r510928 &&
-          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-r510928-main.zip -o clang.zip &&
+          aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/clang-r510928.zip -o clang.zip &&
           unzip -q clang.zip -d clang-r510928 &&
           rm -rf clang.zip &
           
@@ -463,8 +463,8 @@ jobs:
           rustc_version=$(rustc --version 2>/dev/null | head -n1); [ -z "$rustc_version" ] && echo "rustc Version: Not installed" || echo "rustc Version：$rustc_version"
           
           cd kernel_workspace/common
-          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
-          make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 Image || { echo "make Image failed"; exit 1; }
+          #make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 gki_defconfig || { echo "make gki_defconfig failed"; exit 1; }
+          #make -j$(nproc --all) LLVM=1 ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- CC="ccache clang" LD=ld.lld HOSTLD=ld.lld O=out KCFLAGS+=-O2 KCFLAGS+=-Wno-error KCFLAGS+=-ferror-limit=0 Image || { echo "make Image failed"; exit 1; }
       
       - name: 📦 Make AnyKernel3
         run: |
