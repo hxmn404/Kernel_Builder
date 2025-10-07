@@ -135,13 +135,14 @@ jobs:
           unzip -q build-tools.zip &&
           rm -rf build-tools.zip &
           TOOLS_PID=$!
-          
+
           echo "Cloning llvm-clang toolchain..." &&
-          CLANGVER="r510928"
-          echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          aria2c -s16 -x16 -k1M "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-$CLANGVER/clang-$CLANGVER.zip" -o clang-$CLANGVER.zip &&
-          unzip -q clang-$CLANGVER.zip &&
-          rm -rf clang-$CLANGVER.zip &
+          CLANGVER="r510928" &&
+          echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV &&
+          mkdir -p clang-$CLANGVER &&
+          aria2c -s16 -x16 -k1M "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-$CLANGVER/clang-$CLANGVER.zip" -o clang.zip &&
+          unzip -q clang.zip -d clang-$CLANGVER &&
+          rm -rf clang.zip &
           CLANG_PID=$!
           
           wait $KERNEL_PID $TOOLS_PID $CLANG_PID
