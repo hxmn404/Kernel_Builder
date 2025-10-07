@@ -124,14 +124,14 @@ jobs:
           mkdir -p kernel_workspace && cd kernel_workspace
           
           echo "Cloning source code repository..."
-          aria2c -s32 -x32 -k1M "https://github.com/TukangHantam/android_kernel_xiaomi_mt6899/archive/refs/heads/${{ inputs.kernel_version }}.zip" -o common.zip && 
+          aria2c -s16 -x16 -k1M "https://github.com/TukangHantam/android_kernel_xiaomi_mt6899/archive/refs/heads/${{ inputs.kernel_version }}.zip" -o common.zip && 
           unzip -q common.zip && 
           mv "android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}" common &&
           rm -rf common.zip &
           KERNEL_PID=$!
           
           echo "Cloning build tools..." &&
-          aria2c -s32 -x32 -k1M "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/build-tools.zip" -o build-tools.zip &&
+          aria2c -s16 -x16 -k1M "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/build-tools.zip" -o build-tools.zip &&
           unzip -q build-tools.zip &&
           rm -rf build-tools.zip &
           TOOLS_PID=$!
@@ -139,7 +139,7 @@ jobs:
           echo "Cloning llvm-clang toolchain..." &&
           CLANGVER="r510928"
           echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          aria2c -s32 -x32 -k1M "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-$CLANGVER/clang-$CLANGVER.zip" -o clang-$CLANGVER.zip &&
+          aria2c -s16 -x16 -k1M "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-$CLANGVER/clang-$CLANGVER.zip" -o clang-$CLANGVER.zip &&
           unzip -q clang-$CLANGVER.zip &&
           rm -rf clang-$CLANGVER.zip &
           CLANG_PID=$!
