@@ -120,27 +120,50 @@ jobs:
       
       - name: etst
         run: |
+          set -e
           mkdir -p kernel_workspace && cd kernel_workspace
+
+          download_optimized() {
+              local url="$1"
+              local output="$2"
+              echo "Downloading: $url"
+              aria2c \
+                  -s32 -x32 -k1M \  # Split & connections lebih tinggi
+                  --max-connection-per-server=16 \  # Batasi per server
+                  --timeout=30 --connect-timeout=10 \  # Timeouts
+                  --max-tries=5 --retry-wait=5 \  # Retry
+                  --http-accept-gzip=true \  # Kompresi
+                  --user-agent="Mozilla/5.0 (compatible; aria2)" \  # User agent
+                  --summary-interval=10 \  # Log progress
+                  --no-conf \  # Abaikan config
+                  --allow-overwrite=true \
+                  -o "$output" \
+                  "$url" || { echo "Download gagal: $url"; exit 1; }
+          }
+          
           echo "Cloning source code repository..."
-          aria2c -s16 -x16 -k1M https://github.com/TukangHantam/android_kernel_xiaomi_mt6899/archive/refs/heads/${{ inputs.kernel_version }}.zip -o common.zip && 
+          download_optimized "https://github.com/TukangHantam/android_kernel_xiaomi_mt6899/archive/refs/heads/${{ inputs.kernel_version }}.zip" -o common.zip && 
           unzip -q common.zip && 
           mv "android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}" common &&
           rm -rf common.zip &
-
+          KERNEL_PID=$!
+          
           echo "Cloning build tools..." &&
-          aria2c -s16 -x16 -k1M https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/build-tools.zip -o build-tools.zip &&
+          download_optimized "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/build-tools.zip" -o build-tools.zip &&
           unzip -q build-tools.zip &&
           rm -rf build-tools.zip &
+          TOOLS_PID=$!
           
           echo "Cloning llvm-clang toolchain..." &&
-          # CLANGVER="r510928"
-          # echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-r510928-main.zip?ref_type=heads -o clang.zip &&
-          unzip -q clang.zip &&
-          mv "clang-r510928-main" clang-r510928 &&
-          rm -rf clang.zip &
-
-          wait
+          CLANGVER="r510928"
+          echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
+          download_optimized "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-$CLANGVER/clang-$CLANGVER.zip" -o clang-$CLANGVER.zip &&
+          unzip -q clang-$CLANGVER.zip &&
+          rm -rf clang-$CLANGVER.zip &
+          CLANG_PID=$!
+          
+          wait $KERNEL_PID $TOOLS_PID $CLANG_PID
+          
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
           SUBLEVEL=$(grep '^SUBLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
@@ -149,9 +172,6 @@ jobs:
           # Full kernel version
           echo "KERNEL_VER=${VERSION}.${PATCHLEVEL}.${SUBLEVEL}" >> $GITHUB_ENV
 
-          ls -la
-          cd clang-r510928
-          ls -la
       - name: Add KernelSU & Apply SUSFS Patches
         run: |
           # Clone repositories
@@ -447,10 +467,10 @@ jobs:
 
           export PATH="/usr/lib/ccache:$PATH"
           export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
-          export PATH="$GITHUB_WORKSPACE/kernel_workspace/clang-r510928/bin:$PATH"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/clang-${{ env.CLANGVER }}/bin:$PATH"
           export PATH="$GITHUB_WORKSPACE/kernel_workspace/build-tools/bin:$PATH"
           
-          CLANG_DIR="$GITHUB_WORKSPACE/kernel_workspace/clang-r510928/bin"
+          CLANG_DIR="$GITHUB_WORKSPACE/kernel_workspace/clang-${{ env.CLANGVER }}/bin"
           CLANG_VERSION="$($CLANG_DIR/clang --version | head -n 1)"
           LLD_VERSION="$($CLANG_DIR/ld.lld --version | head -n 1)"
           echo "Compiler information:"
