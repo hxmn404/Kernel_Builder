@@ -137,7 +137,7 @@ jobs:
           # echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
           aria2c -s16 -x16 -k1M https://git.codelinaro.org/clo/la/kernelplatform/prebuilts-master/clang/host/linux-x86/-/archive/ks-kernel.lnx.4.0.r1-rel/linux-x86-ks-kernel.lnx.4.0.r1-rel.zip?path=clang-r510928 -o clang.zip &&
           unzip -q clang.zip &&
-          mv "linux-x86-ks-kernel.lnx.4.0.r1-rel-clang-r510928-main" clang-r510928 &&
+          mv "linux-x86-ks-kernel.lnx.4.0.r1-rel-clang-r510928" clang-r510928 &&
           rm -rf clang.zip &
           
           wait
