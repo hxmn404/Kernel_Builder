@@ -135,17 +135,11 @@ jobs:
           echo "Cloning llvm-clang toolchain..." &&
           # CLANGVER="r510928"
           # echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          # aria2c -s16 -x16 -k1M https://git.codelinaro.org/clo/la/kernelplatform/prebuilts-master/clang/host/linux-x86/-/archive/ks-kernel.lnx.4.0.r1-rel/linux-x86-ks-kernel.lnx.4.0.r1-rel.zip?path=clang-r510928 -o clang.zip &&
-          # unzip -q clang.zip &&
-          # mv "linux-x86-ks-kernel.lnx.4.0.r1-rel-clang-r510928" clang-r510928 &&
-          # rm -rf clang.zip &
-
-          aria2c -s16 -x16 -k1M https://github.com/hxmn404/adgf/releases/download/hh/clang-r510928.zip -o clang.zip &&
-          #unzip -q clang.zip &&
-          unzip -q clang.zip -d clang-r510928 &&
-          #mv "linux-x86-ks-kernel.lnx.4.0.r1-rel-clang-r510928" clang-r510928 &&
+          aria2c -s16 -x16 -k1M https://gitlab.com/TukangHantam/clang-r510928/-/archive/main/clang-r510928-main.zip?ref_type=heads -o clang.zip &&
+          unzip -q clang.zip &&
+          mv "clang-r510928-main" clang-r510928 &&
           rm -rf clang.zip &
-          
+
           wait
           VERSION=$(grep '^VERSION' ./common/Makefile | cut -d '=' -f2 | xargs)
           PATCHLEVEL=$(grep '^PATCHLEVEL' ./common/Makefile | cut -d '=' -f2 | xargs)
