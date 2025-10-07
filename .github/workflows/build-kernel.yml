@@ -122,34 +122,16 @@ jobs:
         run: |
           set -e
           mkdir -p kernel_workspace && cd kernel_workspace
-
-          download_optimized() {
-              local url="$1"
-              local output="$2"
-              echo "Downloading: $url"
-              aria2c \
-                  -s32 -x32 -k1M \  # Split & connections lebih tinggi
-                  --max-connection-per-server=16 \  # Batasi per server
-                  --timeout=30 --connect-timeout=10 \  # Timeouts
-                  --max-tries=5 --retry-wait=5 \  # Retry
-                  --http-accept-gzip=true \  # Kompresi
-                  --user-agent="Mozilla/5.0 (compatible; aria2)" \  # User agent
-                  --summary-interval=10 \  # Log progress
-                  --no-conf \  # Abaikan config
-                  --allow-overwrite=true \
-                  -o "$output" \
-                  "$url" || { echo "Download gagal: $url"; exit 1; }
-          }
           
           echo "Cloning source code repository..."
-          download_optimized "https://github.com/TukangHantam/android_kernel_xiaomi_mt6899/archive/refs/heads/${{ inputs.kernel_version }}.zip" -o common.zip && 
+          aria2c -s32 -x32 -k1M "https://github.com/TukangHantam/android_kernel_xiaomi_mt6899/archive/refs/heads/${{ inputs.kernel_version }}.zip" -o common.zip && 
           unzip -q common.zip && 
           mv "android_kernel_xiaomi_mt6899-${{ inputs.kernel_version }}" common &&
           rm -rf common.zip &
           KERNEL_PID=$!
           
           echo "Cloning build tools..." &&
-          download_optimized "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/build-tools.zip" -o build-tools.zip &&
+          aria2c -s32 -x32 -k1M "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-r510928/build-tools.zip" -o build-tools.zip &&
           unzip -q build-tools.zip &&
           rm -rf build-tools.zip &
           TOOLS_PID=$!
@@ -157,7 +139,7 @@ jobs:
           echo "Cloning llvm-clang toolchain..." &&
           CLANGVER="r510928"
           echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          download_optimized "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-$CLANGVER/clang-$CLANGVER.zip" -o clang-$CLANGVER.zip &&
+          aria2c -s32 -x32 -k1M "https://github.com/cctv18/oneplus_sm8650_toolchain/releases/download/LLVM-Clang18-$CLANGVER/clang-$CLANGVER.zip" -o clang-$CLANGVER.zip &&
           unzip -q clang-$CLANGVER.zip &&
           rm -rf clang-$CLANGVER.zip &
           CLANG_PID=$!
