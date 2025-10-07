@@ -135,9 +135,15 @@ jobs:
           echo "Cloning llvm-clang toolchain..." &&
           # CLANGVER="r510928"
           # echo "CLANGVER=$CLANGVER" >> $GITHUB_ENV
-          aria2c -s16 -x16 -k1M https://git.codelinaro.org/clo/la/kernelplatform/prebuilts-master/clang/host/linux-x86/-/archive/ks-kernel.lnx.4.0.r1-rel/linux-x86-ks-kernel.lnx.4.0.r1-rel.zip?path=clang-r510928 -o clang.zip &&
-          unzip -q clang.zip &&
-          mv "linux-x86-ks-kernel.lnx.4.0.r1-rel-clang-r510928" clang-r510928 &&
+          # aria2c -s16 -x16 -k1M https://git.codelinaro.org/clo/la/kernelplatform/prebuilts-master/clang/host/linux-x86/-/archive/ks-kernel.lnx.4.0.r1-rel/linux-x86-ks-kernel.lnx.4.0.r1-rel.zip?path=clang-r510928 -o clang.zip &&
+          # unzip -q clang.zip &&
+          # mv "linux-x86-ks-kernel.lnx.4.0.r1-rel-clang-r510928" clang-r510928 &&
+          # rm -rf clang.zip &
+
+          aria2c -s16 -x16 -k1M https://github.com/hxmn404/adgf/releases/download/hh/clang-r510928.zip -o clang.zip &&
+          #unzip -q clang.zip &&
+          unzip -q clang.zip -d clang-r510928 &&
+          #mv "linux-x86-ks-kernel.lnx.4.0.r1-rel-clang-r510928" clang-r510928 &&
           rm -rf clang.zip &
           
           wait
@@ -447,10 +453,10 @@ jobs:
 
           export PATH="/usr/lib/ccache:$PATH"
           export KBUILD_BUILD_TIMESTAMP="${{ env.TIME_BUILD }}"
-          export PATH="$GITHUB_WORKSPACE/kernel_workspace/clang-r510928/clang-r510928/bin:$PATH"
+          export PATH="$GITHUB_WORKSPACE/kernel_workspace/clang-r510928/bin:$PATH"
           export PATH="$GITHUB_WORKSPACE/kernel_workspace/build-tools/bin:$PATH"
           
-          CLANG_DIR="$GITHUB_WORKSPACE/kernel_workspace/clang-r510928/clang-r510928/bin"
+          CLANG_DIR="$GITHUB_WORKSPACE/kernel_workspace/clang-r510928/bin"
           CLANG_VERSION="$($CLANG_DIR/clang --version | head -n 1)"
           LLD_VERSION="$($CLANG_DIR/ld.lld --version | head -n 1)"
           echo "Compiler information:"
