@@ -480,6 +480,7 @@ jobs:
           path: ./AnyKernel3/*
 
       - name: Package files for telegram
+        if: ${{ inputs.upload_tg }}
         run: |
           echo "Packing files..."
           ESCAPED_KERNEL_VER=$(echo "${{ env.KERNEL_VER }}" | sed -e 's/\./\\./g' -e 's/-/\\-/g')
@@ -503,6 +504,7 @@ jobs:
           EOF
           
       - name: Upload to telegram
+        if: ${{ inputs.upload_tg }}
         uses: puernya/tg-bot-upload@v1
         with:
           bot-id: ${{ secrets.BOT_ID }}
