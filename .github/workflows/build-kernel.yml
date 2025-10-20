@@ -73,13 +73,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🚀 Maximize Build Space
-        uses: TukangHantam/maximize-build-space@main
+      - name: 🚀 Optimize Build Disk Space
+        uses: TukangHantam/optimize-disk-space@main
         with:
-          # remove-dotnet: 'true'         # Frees ~2 GB
-          # remove-haskell: 'true'        # Frees ~5.2 GB
-          # remove-codeql: 'true'         # Frees ~5.4 GB
-          # remove-docker-images: 'true'  # Frees ~3.2 GB
+          remove-dotnet: 'true'         # Frees ~2 GB
+          remove-haskell: 'true'        # Frees ~5.2 GB
+          remove-codeql: 'true'         # Frees ~5.4 GB
+          remove-docker-images: 'true'  # Frees ~3.2 GB
           verbose: 'true'               # Show detailed logging of the action
           
       - name: 📊 Check disk space
