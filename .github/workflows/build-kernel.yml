@@ -74,7 +74,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: 🚀 Optimize Build Disk Space
-        uses: TukangHantam/optimize-disk-space@main
+        uses: TukangHantam/optimize-build-space@main
         with:
           remove-dotnet: 'true'         # Frees ~2 GB
           remove-haskell: 'true'        # Frees ~5.2 GB
