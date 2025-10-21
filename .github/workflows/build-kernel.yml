@@ -105,6 +105,12 @@ jobs:
             bc aria2 zip unzip ccache
           #ccache python3 git curl build-essential libssl-dev bison flex libelf-dev aria2 unzip zip
 
+      - name: Install Dependencies + APTC
+        uses: awalsh128/cache-apt-pkgs-action@latest 
+        with: 
+          packages: ccache python3 git curl build-essential libssl-dev bison flex libelf-dev aria2 unzip
+          execute_install_scripts: true
+          
       - name: Set up ccache
         run: |
           ccache --version
