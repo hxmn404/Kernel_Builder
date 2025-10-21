@@ -91,19 +91,6 @@ jobs:
         run: |
           git config --global user.name "hxmn404"
           git config --global user.email "kangbuilder404@gmail.com"
-          
-      - name: Install Dependencies
-        run: |
-          sudo apt-mark hold firefox
-          sudo apt-mark hold libc-bin
-          sudo apt purge man-db
-          sudo rm -rf /var/lib/man-db/auto-update
-          sudo apt update
-          sudo apt-get install -y --no-install-recommends \
-            curl bison flex make binutils git perl gcc python3 \
-            python-is-python3 bc libssl-dev libelf-dev \
-            bc aria2 zip unzip ccache
-          #ccache python3 git curl build-essential libssl-dev bison flex libelf-dev aria2 unzip zip
 
       - name: Install Dependencies + APTC
         uses: awalsh128/cache-apt-pkgs-action@latest 
@@ -124,7 +111,7 @@ jobs:
           path: ${{ env.CCACHE_DIR }}
           key: ccache-${{ runner.os }}-${{ inputs.android_version }}-${{ inputs.kernel_version }}
       
-      - name: etst
+      - name: Initialize repository and toolchain
         run: |
           set -e
           mkdir -p kernel_workspace && cd kernel_workspace
