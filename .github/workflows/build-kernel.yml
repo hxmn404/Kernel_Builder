@@ -47,7 +47,7 @@ on:
         description: "Enable kernel-level LSM to prevent illegal writes to critical partitions/device nodes"
         required: true
         type: boolean
-        default: true
+        default: false
       use_zram:
         description: 'Enable adding more ZRAM Algorithms?'
         required: true
@@ -313,8 +313,7 @@ jobs:
         run: |
           cd kernel_workspace/common
           echo "Enabling kernel-level baseband protection support..."
-          curl -LSs https://raw.githubusercontent.com/TukangHantam/Baseband-guard/main/setup.sh | bash
-          sed -i '/^config LSM$/,/^help$/{ /^[[:space:]]*default/ { /baseband_guard/! s/bpf/bpf,baseband_guard/ } }' ./security/Kconfig
+          curl -LSs https://raw.githubusercontent.com/vc-teahouse/Baseband-guard/main/setup.sh | bash
           
       - name: Add Configuration Settings
         run: |
@@ -324,7 +323,7 @@ jobs:
           set_config() {
             KEY="$1"
             VALUE="$2"
-        
+          
             if grep -q "^$KEY=" "$FILE"; then
               CURRENT_VALUE=$(grep "^$KEY=" "$FILE" | head -n1 | cut -d'=' -f2-)
               if [ "$CURRENT_VALUE" != "$VALUE" ]; then
@@ -338,7 +337,7 @@ jobs:
               echo "$KEY=$VALUE" >> "$FILE"
             fi
           }
-          
+
           # KSU Configuration
           set_config CONFIG_KSU y
           if [ "${{ inputs.use_hook }}" = "Kprobes" ]; then
@@ -408,6 +407,7 @@ jobs:
           # Linux Security Modules (LSM)
           if [ "${{ inputs.use_lsm }}" = "true" ]; then
             set_config CONFIG_BBG y
+            set_config CONFIG_LSM '"landlock,lockdown,yama,loadpin,safesetid,integrity,selinux,smack,tomoyo,apparmor,bpf,baseband_guard"'
           fi
 
           # Build Optimization Configuration
